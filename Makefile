@@ -397,3 +397,18 @@ fix:
 	@$(MAKE) tidy
 	@$(MAKE) mocks
 	@$(MAKE) docs
+
+.PHONY: build-c-shared clean
+
+build-c-shared:
+	@echo "Building c-shared library for Linux..."
+	@rm -f build/libdefradb.so build/libdefradb.h
+	@CGO_ENABLED=1 GOARCH=amd64 GOOS=linux go build -tags cshared -buildmode=c-shared -o build/libdefradb.so ./cbindings
+	@echo "Build complete: build/libdefradb.so"
+
+clean:
+	rm -rf build/libdefradb.*
+
+
+
+
