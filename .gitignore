@@ -61,3 +61,4 @@ crash.log
 
 # Ignore .env files containing sensitive information.
 .env
+aarch64-linux-musl-cross.tgz
