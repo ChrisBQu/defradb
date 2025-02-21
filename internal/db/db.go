@@ -26,14 +26,12 @@ import (
 	"github.com/sourcenetwork/corelog"
 	"github.com/sourcenetwork/immutable"
 
-	"github.com/sourcenetwork/defradb/acp"
 	"github.com/sourcenetwork/defradb/acp/identity"
 	"github.com/sourcenetwork/defradb/client"
 	"github.com/sourcenetwork/defradb/datastore"
 	"github.com/sourcenetwork/defradb/errors"
 	"github.com/sourcenetwork/defradb/event"
 	"github.com/sourcenetwork/defradb/internal/core"
-	"github.com/sourcenetwork/defradb/internal/db/permission"
 	"github.com/sourcenetwork/defradb/internal/keys"
 	"github.com/sourcenetwork/defradb/internal/request/graphql"
 )
@@ -80,9 +78,6 @@ type db struct {
 	// The identity of the current node
 	nodeIdentity immutable.Option[identity.Identity]
 
-	// Contains ACP if it exists
-	acp immutable.Option[acp.ACP]
-
 	// The peer ID and network address information for the current node
 	// if network is enabled. The `atomic.Value` should hold a `peer.AddrInfo` struct.
 	peerInfo atomic.Value
@@ -101,17 +96,15 @@ type db struct {
 func NewDB(
 	ctx context.Context,
 	rootstore datastore.Rootstore,
-	acp immutable.Option[acp.ACP],
 	lens client.LensRegistry,
 	options ...Option,
 ) (client.DB, error) {
-	return newDB(ctx, rootstore, acp, lens, options...)
+	return newDB(ctx, rootstore, lens, options...)
 }
 
 func newDB(
 	ctx context.Context,
 	rootstore datastore.Rootstore,
-	acp immutable.Option[acp.ACP],
 	lens client.LensRegistry,
 	options ...Option,
 ) (*db, error) {
@@ -132,7 +125,6 @@ func newDB(
 	db := &db{
 		rootstore:      rootstore,
 		multistore:     multistore,
-		acp:            acp,
 		lensRegistry:   lens,
 		parser:         parser,
 		options:        options,
@@ -211,20 +203,7 @@ func (db *db) AddPolicy(
 	ctx context.Context,
 	policy string,
 ) (client.AddPolicyResult, error) {
-	if !db.acp.HasValue() {
-		return client.AddPolicyResult{}, client.ErrACPOperationButACPNotAvailable
-	}
-
-	policyID, err := db.acp.Value().AddPolicy(
-		ctx,
-		identity.FromContext(ctx).Value(),
-		policy,
-	)
-	if err != nil {
-		return client.AddPolicyResult{}, err
-	}
-
-	return client.AddPolicyResult{PolicyID: policyID}, nil
+	return client.AddPolicyResult{}, nil
 }
 
 // publishDocUpdateEvent publishes an update event for a document.
@@ -263,42 +242,8 @@ func (db *db) AddDocActorRelationship(
 	relation string,
 	targetActor string,
 ) (client.AddDocActorRelationshipResult, error) {
-	if !db.acp.HasValue() {
-		return client.AddDocActorRelationshipResult{}, client.ErrACPOperationButACPNotAvailable
-	}
 
-	collection, err := db.GetCollectionByName(ctx, collectionName)
-	if err != nil {
-		return client.AddDocActorRelationshipResult{}, err
-	}
-
-	policyID, resourceName, hasPolicy := permission.IsPermissioned(collection)
-	if !hasPolicy {
-		return client.AddDocActorRelationshipResult{}, client.ErrACPOperationButCollectionHasNoPolicy
-	}
-
-	exists, err := db.acp.Value().AddDocActorRelationship(
-		ctx,
-		policyID,
-		resourceName,
-		docID,
-		relation,
-		identity.FromContext(ctx).Value(),
-		targetActor,
-	)
-
-	if err != nil {
-		return client.AddDocActorRelationshipResult{}, err
-	}
-
-	if !exists {
-		err = db.publishDocUpdateEvent(ctx, docID, collection)
-		if err != nil {
-			return client.AddDocActorRelationshipResult{}, err
-		}
-	}
-
-	return client.AddDocActorRelationshipResult{ExistedAlready: exists}, nil
+	return client.AddDocActorRelationshipResult{}, nil
 }
 
 func (db *db) DeleteDocActorRelationship(
@@ -308,35 +253,7 @@ func (db *db) DeleteDocActorRelationship(
 	relation string,
 	targetActor string,
 ) (client.DeleteDocActorRelationshipResult, error) {
-	if !db.acp.HasValue() {
-		return client.DeleteDocActorRelationshipResult{}, client.ErrACPOperationButACPNotAvailable
-	}
-
-	collection, err := db.GetCollectionByName(ctx, collectionName)
-	if err != nil {
-		return client.DeleteDocActorRelationshipResult{}, err
-	}
-
-	policyID, resourceName, hasPolicy := permission.IsPermissioned(collection)
-	if !hasPolicy {
-		return client.DeleteDocActorRelationshipResult{}, client.ErrACPOperationButCollectionHasNoPolicy
-	}
-
-	recordFound, err := db.acp.Value().DeleteDocActorRelationship(
-		ctx,
-		policyID,
-		resourceName,
-		docID,
-		relation,
-		identity.FromContext(ctx).Value(),
-		targetActor,
-	)
-
-	if err != nil {
-		return client.DeleteDocActorRelationshipResult{}, err
-	}
-
-	return client.DeleteDocActorRelationshipResult{RecordFound: recordFound}, nil
+	return client.DeleteDocActorRelationshipResult{}, nil
 }
 
 func (db *db) GetNodeIdentity(context.Context) (immutable.Option[identity.PublicRawIdentity], error) {
@@ -357,14 +274,6 @@ func (db *db) initialize(ctx context.Context) error {
 		return err
 	}
 	defer txn.Discard(ctx)
-
-	// Start acp if enabled, this will recover previous state if there is any.
-	if db.acp.HasValue() {
-		// db is responsible to call db.acp.Close() to free acp resources while closing.
-		if err = db.acp.Value().Start(ctx); err != nil {
-			return err
-		}
-	}
 
 	exists, err := txn.Systemstore().Has(ctx, ds.NewKey("init"))
 	if err != nil && !errors.Is(err, ds.ErrNotFound) {
@@ -435,12 +344,6 @@ func (db *db) Close() {
 	err := db.rootstore.Close()
 	if err != nil {
 		log.ErrorE("Failure closing running process", err)
-	}
-
-	if db.acp.HasValue() {
-		if err := db.acp.Value().Close(); err != nil {
-			log.ErrorE("Failure closing acp", err)
-		}
 	}
 
 	log.Info("Successfully closed running process")

@@ -23,7 +23,6 @@ import (
 	"github.com/sourcenetwork/defradb/http"
 	"github.com/sourcenetwork/defradb/internal/db"
 	"github.com/sourcenetwork/defradb/internal/kms"
-	"github.com/sourcenetwork/defradb/net"
 )
 
 var log = corelog.NewLogger("node")
@@ -85,14 +84,11 @@ func WithEnableDevelopment(enable bool) NodeOpt {
 // Node is a DefraDB instance with optional sub-systems.
 type Node struct {
 	DB         client.DB
-	Peer       *net.Peer
 	Server     *http.Server
 	kmsService kms.Service
 
 	options    *Options
 	dbOpts     []db.Option
-	acpOpts    []ACPOpt
-	netOpts    []net.NodeOpt
 	storeOpts  []StoreOpt
 	serverOpts []http.ServerOpt
 	lensOpts   []LenOpt
@@ -108,9 +104,6 @@ func New(ctx context.Context, opts ...Option) (*Node, error) {
 		case NodeOpt:
 			t(n.options)
 
-		case ACPOpt:
-			n.acpOpts = append(n.acpOpts, t)
-
 		case StoreOpt:
 			n.storeOpts = append(n.storeOpts, t)
 
@@ -119,9 +112,6 @@ func New(ctx context.Context, opts ...Option) (*Node, error) {
 
 		case http.ServerOpt:
 			n.serverOpts = append(n.serverOpts, t)
-
-		case net.NodeOpt:
-			n.netOpts = append(n.netOpts, t)
 
 		case LenOpt:
 			n.lensOpts = append(n.lensOpts, t)
@@ -137,51 +127,14 @@ func (n *Node) Start(ctx context.Context) error {
 		return err
 	}
 
-	acp, err := NewACP(ctx, n.acpOpts...)
-	if err != nil {
-		return err
-	}
-
 	lens, err := NewLens(ctx, n.lensOpts...)
 	if err != nil {
 		return err
 	}
 
-	n.DB, err = db.NewDB(ctx, rootstore, acp, lens, n.dbOpts...)
+	n.DB, err = db.NewDB(ctx, rootstore, lens, n.dbOpts...)
 	if err != nil {
 		return err
-	}
-
-	if !n.options.disableP2P {
-		// setup net node
-		n.Peer, err = net.NewPeer(ctx, n.DB.Blockstore(), n.DB.Encstore(), n.DB.Events(), n.netOpts...)
-		if err != nil {
-			return err
-		}
-
-		ident, err := n.DB.GetNodeIdentity(ctx)
-		if err != nil {
-			return err
-		}
-
-		if n.options.kmsType.HasValue() {
-			switch n.options.kmsType.Value() {
-			case kms.PubSubServiceType:
-				n.kmsService, err = kms.NewPubSubService(
-					ctx,
-					n.Peer.PeerID(),
-					n.Peer.Server(),
-					n.DB.Events(),
-					n.DB.Encstore(),
-					acp,
-					db.NewCollectionRetriever(n.DB),
-					ident.Value().DID,
-				)
-			}
-			if err != nil {
-				return err
-			}
-		}
 	}
 
 	if !n.options.disableAPI {
@@ -216,9 +169,6 @@ func (n *Node) Close(ctx context.Context) error {
 	var err error
 	if n.Server != nil {
 		err = n.Server.Shutdown(ctx)
-	}
-	if n.Peer != nil {
-		n.Peer.Close()
 	}
 	if n.DB != nil {
 		n.DB.Close()

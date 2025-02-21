@@ -19,7 +19,6 @@ import (
 	"github.com/lens-vm/lens/host-go/config/model"
 	"github.com/sourcenetwork/immutable"
 
-	"github.com/sourcenetwork/defradb/acp/identity"
 	"github.com/sourcenetwork/defradb/client"
 	"github.com/sourcenetwork/defradb/client/request"
 	"github.com/sourcenetwork/defradb/errors"
@@ -147,7 +146,7 @@ func (db *db) getViews(ctx context.Context, opts client.CollectionFetchOptions) 
 func (db *db) buildViewCache(ctx context.Context, col client.CollectionDefinition) (err error) {
 	txn := mustGetContextTxn(ctx)
 
-	p := planner.New(ctx, identity.FromContext(ctx), db.acp, db, txn)
+	p := planner.New(ctx, db, txn)
 
 	// temporarily disable the cache in order to query without using it
 	col.Description.IsMaterialized = false

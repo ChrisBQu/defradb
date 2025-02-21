@@ -8,6 +8,8 @@
 // by the Apache License, Version 2.0, included in the file
 // licenses/APL.txt.
 
+//go:build !android
+
 /* Node configuration, in which NodeOpt functions are applied on Options. */
 
 package net

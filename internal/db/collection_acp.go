@@ -8,14 +8,14 @@
 // by the Apache License, Version 2.0, included in the file
 // licenses/APL.txt.
 
+//go:build !android
+
 package db
 
 import (
 	"context"
 
 	"github.com/sourcenetwork/defradb/acp"
-	"github.com/sourcenetwork/defradb/acp/identity"
-	"github.com/sourcenetwork/defradb/internal/db/permission"
 )
 
 // registerDocWithACP handles the registration of the document with acp.
@@ -33,17 +33,7 @@ func (c *collection) registerDocWithACP(
 	ctx context.Context,
 	docID string,
 ) error {
-	// If acp is not available, then no document is registered.
-	if !c.db.acp.HasValue() {
-		return nil
-	}
-	return permission.RegisterDocOnCollectionWithACP(
-		ctx,
-		identity.FromContext(ctx),
-		c.db.acp.Value(),
-		c,
-		docID,
-	)
+	return nil
 }
 
 func (c *collection) checkAccessOfDocWithACP(
@@ -51,16 +41,5 @@ func (c *collection) checkAccessOfDocWithACP(
 	dpiPermission acp.DPIPermission,
 	docID string,
 ) (bool, error) {
-	// If acp is not available, then we have unrestricted access.
-	if !c.db.acp.HasValue() {
-		return true, nil
-	}
-	return permission.CheckAccessOfDocOnCollectionWithACP(
-		ctx,
-		identity.FromContext(ctx),
-		c.db.acp.Value(),
-		c,
-		dpiPermission,
-		docID,
-	)
+	return true, nil
 }

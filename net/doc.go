@@ -10,6 +10,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build !android
+
 /*
 Package net provides P2P network functions for the core DefraDB instance.
 
@@ -27,4 +29,5 @@ and will release this folder under the Apache 2.0 license as per the header of e
 
 @todo: Needs review/scrutiny.
 */
+
 package net

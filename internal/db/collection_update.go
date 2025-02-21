@@ -16,7 +16,6 @@ import (
 	"github.com/sourcenetwork/immutable"
 	"github.com/valyala/fastjson"
 
-	"github.com/sourcenetwork/defradb/acp/identity"
 	"github.com/sourcenetwork/defradb/client"
 	"github.com/sourcenetwork/defradb/client/request"
 	"github.com/sourcenetwork/defradb/internal/planner"
@@ -166,8 +165,6 @@ func (c *collection) makeSelectionPlan(
 	txn := mustGetContextTxn(ctx)
 	planner := planner.New(
 		ctx,
-		identity.FromContext(ctx),
-		c.db.acp,
 		c.db,
 		txn,
 	)

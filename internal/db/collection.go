@@ -21,7 +21,6 @@ import (
 	"github.com/ipfs/go-datastore/query"
 	"github.com/sourcenetwork/immutable"
 
-	"github.com/sourcenetwork/defradb/acp"
 	"github.com/sourcenetwork/defradb/client"
 	"github.com/sourcenetwork/defradb/client/request"
 	"github.com/sourcenetwork/defradb/errors"
@@ -324,12 +323,6 @@ func (c *collection) getAllDocIDsChan(
 				return
 			}
 
-			canRead, err := c.checkAccessOfDocWithACP(
-				ctx,
-				acp.ReadPermission,
-				docID.String(),
-			)
-
 			if err != nil {
 				resCh <- client.DocIDResult{
 					Err: err,
@@ -337,11 +330,10 @@ func (c *collection) getAllDocIDsChan(
 				return
 			}
 
-			if canRead {
-				resCh <- client.DocIDResult{
-					ID: docID,
-				}
+			resCh <- client.DocIDResult{
+				ID: docID,
 			}
+
 		}
 	}()
 
@@ -475,7 +467,7 @@ func (c *collection) create(
 		return err
 	}
 
-	return c.registerDocWithACP(ctx, doc.ID().String())
+	return nil
 }
 
 // Update an existing document with the new values.
@@ -520,20 +512,8 @@ func (c *collection) update(
 	ctx context.Context,
 	doc *client.Document,
 ) error {
-	// Stop the update if the correct permissions aren't there.
-	canUpdate, err := c.checkAccessOfDocWithACP(
-		ctx,
-		acp.WritePermission,
-		doc.ID().String(),
-	)
-	if err != nil {
-		return err
-	}
-	if !canUpdate {
-		return client.ErrDocumentNotFoundOrNotAuthorized
-	}
 
-	err = c.save(ctx, doc, false)
+	err := c.save(ctx, doc, false)
 	if err != nil {
 		return err
 	}
@@ -885,16 +865,6 @@ func (c *collection) exists(
 	ctx context.Context,
 	primaryKey keys.PrimaryDataStoreKey,
 ) (exists bool, isDeleted bool, err error) {
-	canRead, err := c.checkAccessOfDocWithACP(
-		ctx,
-		acp.ReadPermission,
-		primaryKey.DocID,
-	)
-	if err != nil {
-		return false, false, err
-	} else if !canRead {
-		return false, false, nil
-	}
 
 	txn := mustGetContextTxn(ctx)
 	val, err := txn.Datastore().Get(ctx, primaryKey.ToDS())

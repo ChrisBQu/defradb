@@ -13,10 +13,6 @@ package fetcher
 import (
 	"context"
 
-	"github.com/sourcenetwork/immutable"
-
-	"github.com/sourcenetwork/defradb/acp"
-	acpIdentity "github.com/sourcenetwork/defradb/acp/identity"
 	"github.com/sourcenetwork/defradb/client"
 	"github.com/sourcenetwork/defradb/datastore"
 	"github.com/sourcenetwork/defradb/internal/core"
@@ -33,9 +29,7 @@ type wrappingFetcher struct {
 
 	// The below properties are only held in state in order to temporarily adhear to the [Fetcher]
 	// interface.  They can be remove from state once the [Fetcher] interface is cleaned up.
-	identity    immutable.Option[acpIdentity.Identity]
 	txn         datastore.Txn
-	acp         immutable.Option[acp.ACP]
 	col         client.Collection
 	fields      []client.FieldDefinition
 	filter      *mapper.Filter
@@ -51,18 +45,14 @@ func NewDocumentFetcher() Fetcher {
 
 func (f *wrappingFetcher) Init(
 	ctx context.Context,
-	identity immutable.Option[acpIdentity.Identity],
 	txn datastore.Txn,
-	acp immutable.Option[acp.ACP],
 	col client.Collection,
 	fields []client.FieldDefinition,
 	filter *mapper.Filter,
 	docMapper *core.DocumentMapping,
 	showDeleted bool,
 ) error {
-	f.identity = identity
 	f.txn = txn
-	f.acp = acp
 	f.col = col
 	f.fields = fields
 	f.filter = filter
@@ -133,10 +123,6 @@ func (f *wrappingFetcher) Start(ctx context.Context, prefixes ...keys.Walkable) 
 		}
 
 		top = newMultiFetcher(top, deletedFetcher)
-	}
-
-	if f.acp.HasValue() {
-		top = newPermissionedFetcher(ctx, f.identity, f.acp.Value(), f.col, top)
 	}
 
 	if f.filter != nil {

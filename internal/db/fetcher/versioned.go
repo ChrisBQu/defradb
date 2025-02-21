@@ -21,7 +21,6 @@ import (
 	"github.com/sourcenetwork/immutable"
 
 	"github.com/sourcenetwork/defradb/acp"
-	acpIdentity "github.com/sourcenetwork/defradb/acp/identity"
 	"github.com/sourcenetwork/defradb/client"
 	"github.com/sourcenetwork/defradb/datastore"
 	"github.com/sourcenetwork/defradb/datastore/memory"
@@ -99,16 +98,13 @@ type VersionedFetcher struct {
 // Init initializes the VersionedFetcher.
 func (vf *VersionedFetcher) Init(
 	ctx context.Context,
-	identity immutable.Option[acpIdentity.Identity],
 	txn datastore.Txn,
-	acp immutable.Option[acp.ACP],
 	col client.Collection,
 	fields []client.FieldDefinition,
 	filter *mapper.Filter,
 	docmapper *core.DocumentMapping,
 	showDeleted bool,
 ) error {
-	vf.acp = acp
 	vf.col = col
 	vf.queuedCids = list.New()
 	vf.txn = txn
@@ -133,9 +129,7 @@ func (vf *VersionedFetcher) Init(
 	vf.Fetcher = NewDocumentFetcher()
 	return vf.Fetcher.Init(
 		ctx,
-		identity,
 		vf.store,
-		acp,
 		col,
 		fields,
 		filter,

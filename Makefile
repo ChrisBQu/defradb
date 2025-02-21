@@ -408,7 +408,35 @@ build-c-shared:
 
 clean:
 	rm -rf build/libdefradb.*
+	
+ANDROID_NDK=/home/revlinux/Android/Sdk/ndk/25.2.9519653
 
+build-android:
+	@echo "Building c-shared library for Android..."
+	@rm -f build/libdefradb_*.so build/libdefradb.h
+
+	# Build for Android arm64 (most modern Android devices)
+	@CC=$(ANDROID_NDK)/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android21-clang \
+	CGO_ENABLED=1 GOARCH=arm64 GOOS=android \
+	CGO_CFILES="bcmp_override.c" \
+	CGO_CFLAGS="--sysroot=$(ANDROID_NDK)/toolchains/llvm/prebuilt/linux-x86_64/sysroot" \
+	CGO_LDFLAGS="-Wl,--no-undefined" \
+	go build -tags cshared -buildmode=c-shared -o build/libdefradb.so ./mobilebindings
+
+	@echo "Build complete: build/libdefradb_arm64.so"
+
+
+
+
+
+mobile-bind-android:
+	@echo "Building mobile bindings for Android..."
+	@go mod tidy
+	@go install golang.org/x/mobile/cmd/gomobile@latest
+	@go install golang.org/x/mobile/cmd/gobind@latest
+	@$(shell go env GOPATH)/bin/gomobile init
+	@$(shell go env GOPATH)/bin/gomobile bind -target=android -androidapi=21 -o build/defradb.aar ./mobilebindings
+	@echo "Build complete: build/defradb.aar"
 
 
 

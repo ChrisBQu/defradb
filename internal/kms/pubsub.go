@@ -82,7 +82,6 @@ func NewPubSubService(
 	pubsub PubSubServer,
 	eventBus *event.Bus,
 	encstore datastore.Blockstore,
-	acp immutable.Option[acp.ACP],
 	colRetriever CollectionRetriever,
 	nodeDID string,
 ) (*pubSubService, error) {
@@ -92,7 +91,6 @@ func NewPubSubService(
 		pubsub:       pubsub,
 		eventBus:     eventBus,
 		encStore:     newIPLDEncryptionStorage(encstore),
-		acp:          acp,
 		colRetriever: colRetriever,
 		nodeDID:      nodeDID,
 	}
