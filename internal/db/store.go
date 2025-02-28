@@ -22,6 +22,7 @@ import (
 
 // ExecRequest executes a request against the database.
 func (db *db) ExecRequest(ctx context.Context, request string, opts ...client.RequestOption) *client.RequestResult {
+
 	ctx, txn, err := ensureContextTxn(ctx, db, false)
 	if err != nil {
 		res := &client.RequestResult{}
@@ -29,17 +30,14 @@ func (db *db) ExecRequest(ctx context.Context, request string, opts ...client.Re
 		return res
 	}
 	defer txn.Discard(ctx)
-
 	options := &client.GQLOptions{}
 	for _, o := range opts {
 		o(options)
 	}
-
 	res := db.execRequest(ctx, request, options)
 	if len(res.GQL.Errors) > 0 {
 		return res
 	}
-
 	if err := txn.Commit(ctx); err != nil {
 		res.GQL.Errors = append(res.GQL.Errors, err)
 		return res

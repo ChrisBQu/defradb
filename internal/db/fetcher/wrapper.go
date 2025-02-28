@@ -52,6 +52,8 @@ func (f *wrappingFetcher) Init(
 	docMapper *core.DocumentMapping,
 	showDeleted bool,
 ) error {
+
+	println("Init fetcher")
 	f.txn = txn
 	f.col = col
 	f.fields = fields

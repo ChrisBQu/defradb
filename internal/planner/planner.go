@@ -470,17 +470,26 @@ func (p *Planner) executeRequest(
 	_ context.Context,
 	planNode planNode,
 ) ([]map[string]any, error) {
+
+	println("Here exec.a")
+
 	if err := planNode.Start(); err != nil {
 		return nil, err
 	}
+
+	println("Here exec.b")
 
 	hasNext, err := planNode.Next()
 	if err != nil {
 		return nil, err
 	}
 
+	println("Here exec.c")
+
 	docs := []map[string]any{}
 	docMap := planNode.DocumentMap()
+
+	println("Here exec.d")
 
 	for hasNext {
 		copy := docMap.ToMap(planNode.Value())
@@ -491,6 +500,7 @@ func (p *Planner) executeRequest(
 			return nil, err
 		}
 	}
+	println("Here exec.e")
 	return docs, err
 }
 
@@ -512,45 +522,49 @@ func (p *Planner) RunRequest(
 	ctx context.Context,
 	req *request.Request,
 ) (map[string]any, error) {
+
+	println("Here Plan A")
 	planNode, err := p.MakePlan(req)
 	if err != nil {
 		return nil, err
 	}
-
+	println("PlanNode:")
+	println(planNode)
+	println("Here Plan B")
 	defer func() {
 		if e := planNode.Close(); e != nil {
 			err = NewErrFailedToClosePlan(e, "running request")
 		}
 	}()
-
+	println("Here Plan C")
 	err = planNode.Init()
 	if err != nil {
 		return nil, err
 	}
-
+	println("Here Plan D")
 	// Ensure subscription request doesn't ever end up with an explain directive.
 	if len(req.Subscription) > 0 && req.Subscription[0].Directives.ExplainType.HasValue() {
 		return nil, ErrCantExplainSubscriptionRequest
 	}
-
+	println("Here Plan E")
 	if len(req.Queries) > 0 && req.Queries[0].Directives.ExplainType.HasValue() {
 		return p.explainRequest(ctx, planNode, req.Queries[0].Directives.ExplainType.Value())
 	}
-
+	println("Here Plan F")
 	if len(req.Mutations) > 0 && req.Mutations[0].Directives.ExplainType.HasValue() {
 		return p.explainRequest(ctx, planNode, req.Mutations[0].Directives.ExplainType.Value())
 	}
-
+	println("Here Plan G")
 	// This won't / should NOT execute if it's any kind of explain request.
 	res, err := p.executeRequest(ctx, planNode)
 	if err != nil {
 		return nil, err
 	}
-
+	println("Here Plan H")
 	if len(res) > 0 {
 		return res[0], nil
 	}
-
+	println("Here Plan I")
 	return nil, nil
 }
 

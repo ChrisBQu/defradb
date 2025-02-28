@@ -48,6 +48,8 @@ func (p *Planner) Lens(source planNode, docMap *core.DocumentMapping, col client
 func (n *lensNode) Init() error {
 	n.input = enumerable.NewQueue[map[string]any]()
 
+	println("I am now here. In fetcher init (lens node)")
+
 	pipe, err := n.p.db.LensRegistry().MigrateUp(n.p.ctx, n.input, n.collection.ID)
 	if err != nil {
 		return err

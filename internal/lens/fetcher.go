@@ -7,7 +7,6 @@
 // the Business Source License, use of this software will be governed
 // by the Apache License, Version 2.0, included in the file
 // licenses/APL.txt.
-
 package lens
 
 import (
@@ -67,6 +66,8 @@ func (f *lensedFetcher) Init(
 	showDeleted bool,
 ) error {
 	f.col = col
+
+	println("I am now here. In fetcher init")
 
 	f.fieldDescriptionsByName = make(map[string]client.FieldDefinition, len(col.Schema().Fields))
 	// Add cache the field descriptions in reverse, allowing smaller-index fields to overwrite any later

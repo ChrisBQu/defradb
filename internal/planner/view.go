@@ -67,6 +67,7 @@ func (p *Planner) View(query *mapper.Select, col client.Collection) (planNode, e
 }
 
 func (n *viewNode) Init() error {
+	println("I am now here. In viewNode init")
 	return n.source.Init()
 }
 

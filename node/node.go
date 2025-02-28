@@ -122,45 +122,52 @@ func New(ctx context.Context, opts ...Option) (*Node, error) {
 
 // Start starts the node sub-systems.
 func (n *Node) Start(ctx context.Context) error {
+
+	println("Here b.a")
 	rootstore, err := NewStore(ctx, n.storeOpts...)
 	if err != nil {
 		return err
 	}
-
+	println("Here b.b")
 	lens, err := NewLens(ctx, n.lensOpts...)
 	if err != nil {
 		return err
 	}
-
+	println("Here b.c")
 	n.DB, err = db.NewDB(ctx, rootstore, lens, n.dbOpts...)
 	if err != nil {
+		println("Error: ", err)
 		return err
 	}
-
+	println("Here b.d")
 	if !n.options.disableAPI {
 		// setup http server
 		handler, err := http.NewHandler(n.DB)
 		if err != nil {
 			return err
 		}
+		println("Here b.e")
 		n.Server, err = http.NewServer(handler, n.serverOpts...)
 		if err != nil {
 			return err
 		}
+		println("Here b.f")
 		err = n.Server.SetListener()
 		if err != nil {
 			return err
 		}
+		println("Here b.g")
 		log.InfoContext(ctx,
 			fmt.Sprintf("Providing HTTP API at %s PlaygroundEnabled=%t", n.Server.Address(), http.PlaygroundEnabled))
 		log.InfoContext(ctx, fmt.Sprintf("Providing GraphQL endpoint at %s/api/v0/graphql", n.Server.Address()))
+		println("Here b.h")
 		go func() {
 			if err := n.Server.Serve(); err != nil && !errors.Is(err, gohttp.ErrServerClosed) {
 				log.ErrorContextE(ctx, "HTTP server stopped", err)
 			}
 		}()
 	}
-
+	println("Here b.i")
 	return nil
 }
 

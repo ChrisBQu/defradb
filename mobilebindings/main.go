@@ -1,54 +1,20 @@
-//go:build cshared
+package mobilebindings
 
-package main
-
-/*
-#cgo CFLAGS: -I${SRCDIR}/jni
-
-#include <jni.h>
-#include <stdlib.h>
-
-static const char* GetStringUTFChars(JNIEnv *env, jstring str) {
-    return (*env)->GetStringUTFChars(env, str, 0);
-}
-
-static void ReleaseStringUTFChars(JNIEnv *env, jstring str, const char* chars) {
-    (*env)->ReleaseStringUTFChars(env, str, chars);
-}
-
-static jstring NewStringUTF(JNIEnv *env, const char* chars) {
-    return (*env)->NewStringUTF(env, chars);
-}
-*/
-import "C"
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
-	"unsafe"
-
-	"encoding/json"
-
-	"github.com/sourcenetwork/defradb/node"
+	"reflect"
 
 	"github.com/sourcenetwork/defradb/client"
+	"github.com/sourcenetwork/defradb/node"
+	_ "golang.org/x/mobile/bind"
 )
 
 var globalNode *node.Node
 
-func makeJString(env *C.JNIEnv, str string) unsafe.Pointer {
-	cstr := C.CString(str) // Allocate C string
-
-	jstr := C.NewStringUTF(env, cstr) // Convert to jstring
-	C.free(unsafe.Pointer(cstr))      // Free C string after use
-
-	return unsafe.Pointer(jstr)
-}
-
-//export Java_com_example_gotestjava_MainActivity_initNode
-func Java_com_example_gotestjava_MainActivity_initNode(env unsafe.Pointer, obj unsafe.Pointer, input unsafe.Pointer) C.int {
-	cstr := C.GetStringUTFChars((*C.JNIEnv)(env), (C.jstring)(input))
-	dbPath := C.GoString(cstr)
+func InitNode(dbPath string) int {
 	ctx := context.Background()
 
 	var err error
@@ -85,28 +51,33 @@ func Java_com_example_gotestjava_MainActivity_initNode(env unsafe.Pointer, obj u
 		return 1
 	}
 	println("Node initialized.")
+
 	return 0
 }
 
-//export Java_com_example_gotestjava_MainActivity_StartNode
-func Java_com_example_gotestjava_MainActivity_StartNode(env unsafe.Pointer, obj unsafe.Pointer) C.int {
+func StartNode() int {
 	// Fail early if the node has not been initialized
 	if globalNode == nil {
 		println("Node is not initialized. Call initNode() first.")
 		return 1
 	}
+	println("Here: a")
 	ctx := context.Background()
+	println("Here: b")
 	err := globalNode.Start(ctx)
+	println("Here: c")
 	if err != nil {
 		println("Error starting the node:", err.Error())
 		return 1
 	}
+	println("Here: d")
 	println("Node started successfully.")
+	println("globalNode address: %p, type: %s\n", globalNode, reflect.TypeOf(globalNode))
+	println("globalNode.DB address: %p, type: %s\n", globalNode.DB, reflect.TypeOf(globalNode.DB))
 	return 0
 }
 
-//export Java_com_example_gotestjava_MainActivity_StopNode
-func Java_com_example_gotestjava_MainActivity_StopNode(env unsafe.Pointer, obj unsafe.Pointer) C.int {
+func StopNode() int {
 	if globalNode == nil {
 		println("Node is not initialized or already stopped.")
 		return 1
@@ -122,11 +93,7 @@ func Java_com_example_gotestjava_MainActivity_StopNode(env unsafe.Pointer, obj u
 	return 0
 }
 
-//export Java_com_example_gotestjava_MainActivity_AddSchema
-func Java_com_example_gotestjava_MainActivity_AddSchema(env unsafe.Pointer, obj unsafe.Pointer, cSchema unsafe.Pointer) C.int {
-	cstr := C.GetStringUTFChars((*C.JNIEnv)(env), (C.jstring)(cSchema))
-	newSchema := C.GoString(cstr)
-
+func AddSchema(newSchema string) int {
 	ctx := context.Background()
 	_, err := globalNode.DB.AddSchema(ctx, newSchema)
 	if err != nil {
@@ -138,13 +105,7 @@ func Java_com_example_gotestjava_MainActivity_AddSchema(env unsafe.Pointer, obj 
 	return 0
 }
 
-//export Java_com_example_gotestjava_MainActivity_AddDocument
-func Java_com_example_gotestjava_MainActivity_AddDocument(env unsafe.Pointer, obj unsafe.Pointer, cColName unsafe.Pointer, cJsonString unsafe.Pointer) C.int {
-	cColNameStr := C.GetStringUTFChars((*C.JNIEnv)(env), (C.jstring)(cColName))
-	colName := C.GoString(cColNameStr)
-	cJsonStringStr := C.GetStringUTFChars((*C.JNIEnv)(env), (C.jstring)(cJsonString))
-	jsonString := C.GoString(cJsonStringStr)
-
+func AddDocument(colName string, jsonString string) int {
 	ctx := context.Background()
 
 	// Check if the collection exists, and if it doesn't fail
@@ -177,12 +138,23 @@ func Java_com_example_gotestjava_MainActivity_AddDocument(env unsafe.Pointer, ob
 	return 0
 }
 
-//export Java_com_example_gotestjava_MainActivity_ExecuteQuery
-func Java_com_example_gotestjava_MainActivity_ExecuteQuery(env unsafe.Pointer, obj unsafe.Pointer, cQuery unsafe.Pointer) unsafe.Pointer {
-	cstr := C.GetStringUTFChars((*C.JNIEnv)(env), (C.jstring)(cQuery))
-	query := C.GoString(cstr)
+func ExecuteQuery(query string) string {
+
+	println("Executing query:", query)
+
+	if globalNode == nil {
+		println("Node is not initialized. Call initNode() first.")
+		return string("")
+	}
+	println("globalNode address: %p, type: %s\n", globalNode, reflect.TypeOf(globalNode))
 
 	ctx := context.Background()
+
+	if globalNode.DB == nil {
+		println("Database is not initialized!")
+		return string("")
+	}
+	println("globalNode.DB address: %p, type: %s\n", globalNode.DB, reflect.TypeOf(globalNode.DB))
 
 	res := globalNode.DB.ExecRequest(ctx, query)
 
@@ -192,7 +164,7 @@ func Java_com_example_gotestjava_MainActivity_ExecuteQuery(env unsafe.Pointer, o
 		for _, err := range res.GQL.Errors {
 			println("Error:", err.Error())
 		}
-		return makeJString((*C.JNIEnv)(env), string("_error_"))
+		return string("")
 	}
 
 	println("Query executed successfully.")
@@ -202,33 +174,13 @@ func Java_com_example_gotestjava_MainActivity_ExecuteQuery(env unsafe.Pointer, o
 		dataJSON, err := json.Marshal(res.GQL.Data)
 		if err != nil {
 			println("Error marshalling Data to JSON:", err.Error())
-			return makeJString((*C.JNIEnv)(env), string("_error_"))
+			return string("")
 		}
-		println("JSON:")
-		println(string(dataJSON))
-
-		return makeJString((*C.JNIEnv)(env), string(dataJSON))
+		return string(dataJSON)
 	}
-
-	return makeJString((*C.JNIEnv)(env), string("_error_"))
+	return string("")
 }
 
-//export Java_com_example_gotestjava_MainActivity_GetString
-func Java_com_example_gotestjava_MainActivity_GetString(env unsafe.Pointer, obj unsafe.Pointer, input unsafe.Pointer) unsafe.Pointer {
-	// Convert input (jstring) to Go string
-	cstr := C.GetStringUTFChars((*C.JNIEnv)(env), (C.jstring)(input))
-	goStr := C.GoString(cstr)
-
-	// Process the string
-	result := "Hello, " + goStr
-
-	// Convert back to jstring
-	jstr := C.NewStringUTF((*C.JNIEnv)(env), C.CString(result))
-
-	// Release the original jstring memory
-	C.ReleaseStringUTFChars((*C.JNIEnv)(env), (C.jstring)(input), cstr)
-
-	return unsafe.Pointer(jstr)
+func GetString() string {
+	return string("Hello")
 }
-
-func main() {}

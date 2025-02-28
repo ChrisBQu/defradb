@@ -16,6 +16,7 @@ import (
 	"github.com/lens-vm/lens/host-go/engine/module"
 
 	"github.com/sourcenetwork/defradb/client"
+
 	"github.com/sourcenetwork/defradb/internal/lens"
 )
 
@@ -45,7 +46,9 @@ type LensOptions struct {
 // DefaultACPOptions returns new options with default values.
 func DefaultLensOptions() *LensOptions {
 	return &LensOptions{
-		lensPoolSize: lens.DefaultPoolSize,
+		// For Android compatability
+		//lensPoolSize: lens.DefaultPoolSize,
+		lensPoolSize: 5,
 	}
 }
 
@@ -63,7 +66,7 @@ func WithLensRuntime(runtime LensRuntimeType) Option {
 // Will default to `5` if not set.
 func WithLensPoolSize(size int) Option {
 	return func(o *LensOptions) {
-		o.lensPoolSize = size
+		o.lensPoolSize = 5
 	}
 }
 
@@ -71,13 +74,14 @@ func NewLens(
 	ctx context.Context,
 	opts ...LenOpt,
 ) (client.LensRegistry, error) {
+	// For Android compatability
 	options := DefaultLensOptions()
 	for _, opt := range opts {
 		opt(options)
 	}
 
 	var runtime module.Runtime
-	if runtimeConstructor, ok := runtimeConstructors[options.lensRuntime]; ok {
+	if runtimeConstructor, ok := runtimeConstructors["wazero"]; ok {
 		runtime = runtimeConstructor()
 	} else {
 		return nil, NewErrLensRuntimeNotSupported(options.lensRuntime)

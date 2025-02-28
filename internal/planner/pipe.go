@@ -47,6 +47,7 @@ func (n *pipeNode) Kind() string {
 func (n *pipeNode) Init() error {
 	// We need to make sure state is cleared down on Init,
 	// this function may be called multiple times per instance (for example during a join)
+	println("I am now here. In fetcher init (pipe node)")
 	n.docIndex = -1
 	n.docs = container.NewDocumentContainer(0)
 	return n.source.Init()

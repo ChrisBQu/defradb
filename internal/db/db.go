@@ -143,8 +143,10 @@ func newDB(
 		lens.Init(db)
 	}
 
+	println("Here b.c.a")
 	err = db.initialize(ctx)
 	if err != nil {
+		println("Here b.c.error")
 		return nil, err
 	}
 
@@ -266,21 +268,25 @@ func (db *db) GetNodeIdentity(context.Context) (immutable.Option[identity.Public
 // Initialize is called when a database is first run and creates all the db global meta data
 // like Collection ID counters.
 func (db *db) initialize(ctx context.Context) error {
+
+	println("Context: ", ctx)
+	println("Here b.c.a.a")
 	db.glock.Lock()
 	defer db.glock.Unlock()
-
+	println("Here b.c.a.b")
 	ctx, txn, err := ensureContextTxn(ctx, db, false)
 	if err != nil {
 		return err
 	}
 	defer txn.Discard(ctx)
-
+	println("Here b.c.a.c")
 	exists, err := txn.Systemstore().Has(ctx, ds.NewKey("init"))
 	if err != nil && !errors.Is(err, ds.ErrNotFound) {
 		return err
 	}
 	// if we're loading an existing database, just load the schema
 	// and migrations and finish initialization
+	println("Here b.c.a.d??")
 	if exists {
 		err = db.loadSchema(ctx)
 		if err != nil {
@@ -297,19 +303,19 @@ func (db *db) initialize(ctx context.Context) error {
 		// we have written to the datastores.
 		return txn.Commit(ctx)
 	}
-
+	println("Here b.c.a.d")
 	// init meta data
 	// collection sequence
 	_, err = db.getSequence(ctx, keys.CollectionIDSequenceKey{})
 	if err != nil {
 		return err
 	}
-
+	println("Here b.c.a.e")
 	err = txn.Systemstore().Put(ctx, ds.NewKey("init"), []byte{1})
 	if err != nil {
 		return err
 	}
-
+	println("Here b.c.a.f")
 	return txn.Commit(ctx)
 }
 

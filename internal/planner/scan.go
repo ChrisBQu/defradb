@@ -62,6 +62,9 @@ func (n *scanNode) Kind() string {
 
 func (n *scanNode) Init() error {
 	// init the fetcher
+	println("I am now here. In fetcher init (scan node)")
+	println("scanNode fetcher:")
+	println(n.fetcher)
 	if err := n.fetcher.Init(
 		n.p.ctx,
 		n.p.txn,
@@ -73,6 +76,7 @@ func (n *scanNode) Init() error {
 	); err != nil {
 		return err
 	}
+	println("About to call initScan")
 	return n.initScan()
 }
 

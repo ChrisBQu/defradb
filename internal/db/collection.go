@@ -32,7 +32,6 @@ import (
 	"github.com/sourcenetwork/defradb/internal/db/fetcher"
 	"github.com/sourcenetwork/defradb/internal/encryption"
 	"github.com/sourcenetwork/defradb/internal/keys"
-	"github.com/sourcenetwork/defradb/internal/lens"
 	merklecrdt "github.com/sourcenetwork/defradb/internal/merkle/crdt"
 )
 
@@ -66,14 +65,17 @@ func (db *db) newCollection(desc client.CollectionDescription, schema client.Sch
 // It's a very simple factory, but it allows us to inject a mock fetcher
 // for testing.
 func (c *collection) newFetcher() fetcher.Fetcher {
-	var innerFetcher fetcher.Fetcher
-	if c.fetcherFactory != nil {
-		innerFetcher = c.fetcherFactory()
-	} else {
-		innerFetcher = fetcher.NewDocumentFetcher()
-	}
+	/*
+		var innerFetcher fetcher.Fetcher
+		if c.fetcherFactory != nil {
+			innerFetcher = c.fetcherFactory()
+		} else {
+			innerFetcher = fetcher.NewDocumentFetcher()
+		}
 
-	return lens.NewFetcher(innerFetcher, c.db.LensRegistry())
+		return lens.NewFetcher(innerFetcher, c.db.LensRegistry())
+	*/
+	return nil
 }
 
 func (db *db) getCollectionByID(ctx context.Context, id uint32) (client.Collection, error) {
