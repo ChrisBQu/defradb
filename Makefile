@@ -423,3 +423,29 @@ fix:
 	@$(MAKE) tidy
 	@$(MAKE) mocks
 	@$(MAKE) docs
+	
+build-c-shared-linux:
+	@echo "Building c-shared library for Linux..."
+	@rm -f build/libdefradb.so build/libdefradb.h
+	@CGO_ENABLED=1 GOARCH=amd64 GOOS=linux go build -tags cshared -buildmode=c-shared -o build/libdefradb.so ./cbindings
+	@echo "Build complete: build/libdefradb.so"
+	
+build-c-shared-windows:
+	@echo "Building c-shared library for Windows..."
+	@rm -f build/libdefradb.dll build/libdefradb.h build/libdefradb.lib
+	@GOOS=windows GOARCH=amd64 CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc \
+		go build -tags cshared -buildmode=c-shared -o build/libdefradb.dll ./cbindings
+	@echo "Build complete: build/libdefradb.dll and build/libdefradb.h"
+
+
+	
+mobile-bind-android:
+	@echo "Building mobile bindings for Android..."
+	@go install golang.org/x/mobile/cmd/gomobile@v0.0.0-20220429170052-d6a35a3b9c35
+	@go install golang.org/x/mobile/cmd/gobind@v0.0.0-20220429170052-d6a35a3b9c35
+
+	@go get github.com/btcsuite/btcd/chaincfg/chainhash@latest
+	@GOMOBILE=$$(go env GOPATH)/bin/gomobile; \
+		$$GOMOBILE init; \
+		$$GOMOBILE bind -target=android -androidapi=24 -o build/defradb.aar ./mobilebindings
+	@echo "Build complete: build/defradb.aar"
