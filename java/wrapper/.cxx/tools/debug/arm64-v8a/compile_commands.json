@@ -1,0 +1,7 @@
+[
+{
+  "directory": "/mnt/d/defradb/java/wrapper/.cxx/Debug/4u6x3m1g/arm64-v8a",
+  "command": "/home/revlinux/Android/Sdk/ndk/25.1.8937393/toolchains/llvm/prebuilt/linux-x86_64/bin/clang --target=aarch64-none-linux-android21 --sysroot=/home/revlinux/Android/Sdk/ndk/25.1.8937393/toolchains/llvm/prebuilt/linux-x86_64/sysroot -Dnativewrapper_EXPORTS -I/mnt/d/defradb/java/wrapper/src/main/cpp -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -fno-limit-debug-info  -fPIC -o CMakeFiles/nativewrapper.dir/src/main/cpp/jni_bridge.c.o -c /mnt/d/defradb/java/wrapper/src/main/cpp/jni_bridge.c",
+  "file": "/mnt/d/defradb/java/wrapper/src/main/cpp/jni_bridge.c"
+}
+]

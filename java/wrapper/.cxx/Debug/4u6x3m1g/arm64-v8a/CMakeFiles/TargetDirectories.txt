@@ -1,0 +1,3 @@
+/mnt/d/defradb/java/wrapper/.cxx/Debug/4u6x3m1g/arm64-v8a/CMakeFiles/nativewrapper.dir
+/mnt/d/defradb/java/wrapper/.cxx/Debug/4u6x3m1g/arm64-v8a/CMakeFiles/edit_cache.dir
+/mnt/d/defradb/java/wrapper/.cxx/Debug/4u6x3m1g/arm64-v8a/CMakeFiles/rebuild_cache.dir

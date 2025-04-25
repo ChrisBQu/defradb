@@ -424,6 +424,22 @@ fix:
 	@$(MAKE) mocks
 	@$(MAKE) docs
 	
+build-c-shared-android:
+	@echo "Building c-shared library for Android (arm64)..."
+	@rm -f build/libdefradb.so build/libdefradb.h
+	@export ANDROID_NDK=/home/revlinux/Android/Sdk/ndk/29.0.13113456 && \
+	export CGO_ENABLED=1 && \
+	export GOARCH=arm64 && \
+	export GOOS=android && \
+	export CC=$$ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android21-clang && \
+	export CGO_CFLAGS="-I$$ANDROID_NDK/sysroot/usr/include -I$$ANDROID_NDK/sysroot/usr/include/aarch64-linux-android" && \
+	export CGO_LDFLAGS="-L$$ANDROID_NDK/platforms/android-34/arch-arm64/usr/lib -L$$ANDROID_NDK/sysroot/usr/lib/aarch64-linux-android" && \
+	go build -tags cshared \
+	  -buildmode=c-shared \
+	  -ldflags='-extldflags "-Wl,-soname,libdefradb.so"' \
+	  -o build/libdefradb.so ./cbindings
+	@echo "Build complete: build/libdefradb.so"
+
 build-c-shared-linux:
 	@echo "Building c-shared library for Linux..."
 	@rm -f build/libdefradb.so build/libdefradb.h
@@ -434,18 +450,5 @@ build-c-shared-windows:
 	@echo "Building c-shared library for Windows..."
 	@rm -f build/libdefradb.dll build/libdefradb.h build/libdefradb.lib
 	@GOOS=windows GOARCH=amd64 CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc \
-		go build -tags cshared -buildmode=c-shared -o build/libdefradb.dll ./cbindings
+	go build -tags cshared -buildmode=c-shared -o build/libdefradb.dll ./cbindings
 	@echo "Build complete: build/libdefradb.dll and build/libdefradb.h"
-
-
-	
-mobile-bind-android:
-	@echo "Building mobile bindings for Android..."
-	@go install golang.org/x/mobile/cmd/gomobile@v0.0.0-20220429170052-d6a35a3b9c35
-	@go install golang.org/x/mobile/cmd/gobind@v0.0.0-20220429170052-d6a35a3b9c35
-
-	@go get github.com/btcsuite/btcd/chaincfg/chainhash@latest
-	@GOMOBILE=$$(go env GOPATH)/bin/gomobile; \
-		$$GOMOBILE init; \
-		$$GOMOBILE bind -target=android -androidapi=24 -o build/defradb.aar ./mobilebindings
-	@echo "Build complete: build/defradb.aar"

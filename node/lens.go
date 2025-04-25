@@ -71,9 +71,14 @@ func NewLens(
 	ctx context.Context,
 	opts ...LenOpt,
 ) (client.LensRegistry, error) {
+
 	options := DefaultLensOptions()
 	for _, opt := range opts {
 		opt(options)
+	}
+
+	if options.lensRuntime == "" {
+		options.lensRuntime = Wazero
 	}
 
 	var runtime module.Runtime

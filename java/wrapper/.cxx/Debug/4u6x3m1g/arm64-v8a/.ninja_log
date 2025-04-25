@@ -1,0 +1,11 @@
+# ninja log v5
+6	375	1745593750393844300	CMakeFiles/defra.dir/src/main/cpp/jni_bridge.c.o	7833087710cae8e9
+150	429	1745524276821864600	../../../../build/intermediates/cxx/Debug/4u6x3m1g/obj/arm64-v8a/libnativewrapper.so	65ebd0062e97e68c
+382	990	1745593750982527200	../../../../build/intermediates/cxx/Debug/4u6x3m1g/obj/arm64-v8a/libdefra.so	8326c7535f4ab706
+1	10	0	clean	b6eff79c870dd006
+7	144	1745524276560865100	CMakeFiles/nativewrapper.dir/src/main/cpp/jni_bridge.c.o	610c3aa9e22c4388
+7	341	1745594469255454400	../../../../build/intermediates/cxx/Debug/4u6x3m1g/obj/arm64-v8a/libnativewrapper.so	65ebd0062e97e68c
+7	153	1745594628568281000	CMakeFiles/nativewrapper.dir/src/main/cpp/jni_bridge.c.o	610c3aa9e22c4388
+158	470	1745594628883021400	../../../../build/intermediates/cxx/Debug/4u6x3m1g/obj/arm64-v8a/libnativewrapper.so	65ebd0062e97e68c
+7	148	1745594827375832300	CMakeFiles/nativewrapper.dir/src/main/cpp/jni_bridge.c.o	610c3aa9e22c4388
+153	432	1745594827638057400	../../../../build/intermediates/cxx/Debug/4u6x3m1g/obj/arm64-v8a/libnativewrapper.so	65ebd0062e97e68c

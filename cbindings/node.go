@@ -1,4 +1,5 @@
 //go:build cgo
+// +build cgo
 
 package main
 
@@ -7,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"os"
-	"path/filepath"
 
 	"github.com/sourcenetwork/defradb/client"
 	"github.com/sourcenetwork/defradb/node"
@@ -17,11 +17,9 @@ var globalNode *node.Node
 
 //export initNode
 func initNode(cPath *C.char) C.int {
-
-	dbPath := C.GoString(cPath)
+	dbPath := C.GoString(cPath) // already absolute path from Java
 	ctx := context.Background()
 
-	// If a database node already exists, close it first
 	if globalNode != nil {
 		println("Resetting existing node...")
 		err := globalNode.Close(ctx)
@@ -33,26 +31,24 @@ func initNode(cPath *C.char) C.int {
 		println("Existing node successfully closed and reset.")
 	}
 
-	// Get a directory that is writable (i.e. in the Home Directory)
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		println("Error getting home directory:", err.Error())
-		return 1
-	}
-	storePath := filepath.Join(homeDir, dbPath)
-
-	// Check if the directory exists, if not, create it
-	if _, err := os.Stat(storePath); os.IsNotExist(err) {
-		err := os.MkdirAll(storePath, 0755) // Create the directory with proper permissions
+	// Create the directory if it doesn't exist
+	var err error
+	if _, err = os.Stat(dbPath); os.IsNotExist(err) {
+		err := os.MkdirAll(dbPath, 0755)
 		if err != nil {
 			println("Error creating store directory:", err.Error())
 			return 1
 		}
-		println("Store directory created:", storePath)
+		println("Store directory created:", dbPath)
 	}
 
-	// Create the database node with appropriate options
-	globalNode, err = node.New(ctx, node.WithDisableP2P(true), node.WithDisableAPI(true), node.WithStorePath(storePath))
+	globalNode, err = node.New(
+		ctx,
+		node.WithDisableP2P(true),
+		node.WithDisableAPI(true),
+		node.WithStorePath(dbPath),
+		node.WithLensRuntime(node.Wazero),
+	)
 	if err != nil {
 		println("Error creating the node:", err.Error())
 		return 1

@@ -1,0 +1,1 @@
+/usr/bin/cc -fPIC   -shared -Wl,-soname,libnativewrapper.so -o libnativewrapper.so CMakeFiles/nativewrapper.dir/src/main/cpp/jni_bridge.c.o  -Wl,-rpath,/mnt/d/defradb/java/wrapper/lib/arm64-v8a lib/arm64-v8a/libdefradb.so -llog 
