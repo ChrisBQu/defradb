@@ -1,0 +1,40 @@
+//go:build cgo
+// +build cgo
+
+package main
+
+const (
+	// Node
+	cerrClosingNode            string = "error closing node: %v"
+	cerrCreatingStoreDirectory string = "error creating the store directory: %v"
+	cerrCreatingNode           string = "error creating node: %v"
+	cerrUninitializedNode      string = "error: node is not initialized. Call initNode() first"
+	cerrStartingNode           string = "error starting the node: %v"
+	cerrStoppedNode            string = "error stopping node: node is not initialized, or was already stopped"
+	cerrStoppingNode           string = "error stopping node: %v"
+
+	// Schema
+	cerrAddingSchema      string = "error adding schema: %v"
+	cerrGettingSchema     string = "error getting schema: %v"
+	cerrPatchingSchema    string = "error patching schema: %v"
+	cerrSetActiveSchema   string = "error setting active version of schema: %v"
+	cerrEmptyPatch        string = "patch cannot be empty"
+	cerrInvalidLensConfig string = "invalid lens configuration: %v"
+
+	// Query
+	cerrGraphQLResponseEmpty string = "error: graphQL response data is nil or empty"
+
+	// Collection
+	cerrGettingCollectionByName string = "error getting collection by name: %v"
+	cerrCreatingDoc             string = "error creating document: %v"
+	cerrInsertingDoc            string = "error inserting document: %v"
+	cerrDeletingDoc             string = "error deleting document: %v"
+
+	// Txn
+	cerrCreatingTxn     string = "error creating transaction: %v"
+	cerrCommittingTxn   string = "error committing transaction: %v"
+	cerrTxnDoesNotExist string = "error: transaction with ID %v does not exist"
+
+	// Generic
+	cerrMarshallingJSON string = "error marshalling JSON: %v"
+)
