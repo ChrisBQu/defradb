@@ -9,7 +9,7 @@ typedef struct {
 } Result;
 
 typedef struct {
-    unsigned long int tx;
+    unsigned long long tx;
     const char* version;
     const char* schema;
     const char* name;

@@ -25,10 +25,12 @@ const (
 	cerrGraphQLResponseEmpty string = "error: graphQL response data is nil or empty"
 
 	// Collection
-	cerrGettingCollectionByName string = "error getting collection by name: %v"
-	cerrCreatingDoc             string = "error creating document: %v"
-	cerrInsertingDoc            string = "error inserting document: %v"
-	cerrDeletingDoc             string = "error deleting document: %v"
+	cerrGettingCollection    string = "error getting collection: %v"
+	cerrCreatingDoc          string = "error creating document: %v"
+	cerrInsertingDoc         string = "error inserting document: %v"
+	cerrDeletingDoc          string = "error deleting document: %v"
+	cerrAmbiguousCollection  string = "error: more than one collection matches the given criteria, could not set context"
+	cerrNoMatchingCollection string = "error: no collection matches the given criteria, could not set context"
 
 	// Txn
 	cerrCreatingTxn     string = "error creating transaction: %v"
