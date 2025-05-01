@@ -31,6 +31,7 @@ const (
 	cerrDeletingDoc          string = "error deleting document: %v"
 	cerrAmbiguousCollection  string = "error: more than one collection matches the given criteria, could not set context"
 	cerrNoMatchingCollection string = "error: no collection matches the given criteria, could not set context"
+	cerrNoDocIDOrFilter      string = "error: deleting a collection requires doc ID or a filter"
 
 	// Txn
 	cerrCreatingTxn     string = "error creating transaction: %v"

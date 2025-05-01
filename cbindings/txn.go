@@ -17,6 +17,8 @@ import (
 	"github.com/sourcenetwork/defradb/datastore"
 )
 
+type transactionContextKey struct{}
+
 var TxnStore sync.Map
 
 //export createTransaction

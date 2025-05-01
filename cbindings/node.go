@@ -12,6 +12,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 	"unsafe"
 
 	"github.com/sourcenetwork/defradb/node"
@@ -29,6 +30,7 @@ func returnC(status int, errortext string, valuetext string) *C.Result {
 }
 
 var globalNode *node.Node
+var nodeReady = make(chan struct{})
 
 //export initNode
 func initNode(cPath *C.char) *C.Result {
@@ -55,7 +57,6 @@ func initNode(cPath *C.char) *C.Result {
 	// Try to create the node
 	globalNode, err = node.New(
 		ctx,
-		node.WithDisableP2P(true),
 		node.WithDisableAPI(true),
 		node.WithStorePath(dbPath),
 		node.WithLensRuntime(node.Wazero),
@@ -75,12 +76,26 @@ func startNode() *C.Result {
 		return returnC(1, cerrUninitializedNode, "")
 	}
 	ctx := context.Background()
-	err := globalNode.Start(ctx)
-	if err != nil {
-		return returnC(1, fmt.Sprintf(cerrStartingNode, err), "")
-	}
 
-	return returnC(0, "", "")
+	go func() {
+		err := globalNode.Start(ctx)
+		if err != nil {
+			// TO DO: Pass this out to the main function for return to C
+			println("Failed to start node")
+			return
+		}
+		close(nodeReady)
+	}()
+
+	// Wait for the node to be ready, or timeout after 5 seconds
+	select {
+	case <-nodeReady:
+		// Node started successfully
+		return returnC(0, "", "")
+	case <-time.After(5 * time.Second):
+		// Timeout occurred
+		return returnC(1, "Timed out waiting for node to start", "")
+	}
 }
 
 //export stopNode
