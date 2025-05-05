@@ -21,6 +21,7 @@ import (
 )
 
 type collectionContextKey struct{}
+type schemaNameContextKey struct{}
 
 // Helper function
 // Parse the simple (not txn, not identity) options from the C struct into a CollectionFetchOptions object
@@ -121,11 +122,11 @@ func collectionCreate(cJSON *C.char, cIsEncrypted C.int, cEncryptedFields *C.cha
 	// Create the document(s)
 	doc, err := client.NewDocFromJSON(jsonBytes, col.Definition())
 	if err != nil {
-		return returnC(1, fmt.Sprintf("Error: %v", err), "")
+		return returnC(1, err.Error(), "")
 	}
 	err2 := col.Create(ctx, doc)
 	if err2 != nil {
-		return returnC(1, fmt.Sprintf("Error: %v", err2), "")
+		return returnC(1, err2.Error(), "")
 	}
 
 	return returnC(0, "", "")
@@ -155,22 +156,21 @@ func collectionDelete(cDocID *C.char, cFilter *C.char, cOptions C.CollectionOpti
 	case docID != "":
 		ID, err := client.NewDocIDFromString(docID)
 		if err != nil {
-			return returnC(1, fmt.Sprintf("Error: %v", err), "")
+			return returnC(1, err.Error(), "")
 		}
 		_, err = col.Delete(ctx, ID)
 		if err != nil {
-			return returnC(1, fmt.Sprintf(cerrDeletingDoc, err), "")
+			return returnC(1, err.Error(), "")
 		}
 		return returnC(0, "", "")
 	case filter != "":
 		_, err := col.DeleteWithFilter(ctx, filter)
 		if err != nil {
-			return returnC(1, fmt.Sprintf(cerrDeletingDoc, err), "")
+			return returnC(1, err.Error(), "")
 		}
 		return returnC(0, "", "")
 	default:
 		return returnC(1, cerrNoDocIDOrFilter, "")
-
 	}
 }
 
@@ -189,7 +189,7 @@ func collectionDescribe(cOptions C.CollectionOptions) *C.Result {
 	// Get the collections
 	cols, err := globalNode.DB.GetCollections(ctx, options)
 	if err != nil {
-		return returnC(1, fmt.Sprintf(cerrGettingCollection, err), "")
+		return returnC(1, err.Error(), "")
 	}
 
 	// Get the descriptions
@@ -201,7 +201,7 @@ func collectionDescribe(cOptions C.CollectionOptions) *C.Result {
 	// Marshall the descriptions into JSON and return
 	jsonBytes, err := json.MarshalIndent(colDesc, "", "  ")
 	if err != nil {
-		return returnC(1, fmt.Sprintf(cerrMarshallingJSON, err), "")
+		return returnC(1, err.Error(), "")
 	}
 	return returnC(0, "", string(jsonBytes))
 }
@@ -240,7 +240,146 @@ func collectionListDocIDs(cOptions C.CollectionOptions) *C.Result {
 	}
 	jsonBytes, err := json.MarshalIndent(docIDs, "", "  ")
 	if err != nil {
-		return returnC(1, fmt.Sprintf(cerrMarshallingJSON, err), "")
+		return returnC(1, err.Error(), "")
 	}
 	return returnC(0, "", string(jsonBytes))
+}
+
+//export collectionGet
+func collectionGet(cDocID *C.char, cShowDeleted C.int, cOptions C.CollectionOptions) *C.Result {
+	ctx := context.Background()
+	options := parseCollectionOptions(cOptions)
+	docIDinput := C.GoString(cDocID)
+	showDeleted := cShowDeleted != 0
+
+	// Set the transaction
+	newctx, err := setTransactionOfCollectionCommand(ctx, cOptions)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+	ctx = newctx
+
+	// Get the collection
+	col, err := getCollectionForCollectionCommand(ctx, options)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+
+	// Get the document by docID
+	docID, err := client.NewDocIDFromString(docIDinput)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+	doc, err := col.Get(ctx, docID, showDeleted)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+	docMap, err := doc.ToMap()
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+
+	// Marshall into JSON and return
+	jsonBytes, err := json.MarshalIndent(docMap, "", "  ")
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+	return returnC(0, "", string(jsonBytes))
+}
+
+//export collectionPatch
+func collectionPatch(cPatch *C.char, cOptions C.CollectionOptions) *C.Result {
+	ctx := context.Background()
+	options := parseCollectionOptions(cOptions)
+	patch := C.GoString(cPatch)
+
+	// Set the transaction
+	newctx, err := setTransactionOfCollectionCommand(ctx, cOptions)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+	ctx = newctx
+
+	// Get the collection
+	col, err := getCollectionForCollectionCommand(ctx, options)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+
+	// Set the context's collection to the selected one
+	ctx = context.WithValue(ctx, collectionContextKey{}, col)
+	ctx = context.WithValue(ctx, schemaNameContextKey{}, options.SchemaRoot.Value())
+
+	// Try to patch the collection
+	err = globalNode.DB.PatchCollection(ctx, patch)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+	return returnC(0, "", "")
+}
+
+//export collectionUpdate
+func collectionUpdate(cDocID *C.char, cFilter *C.char, cUpdater *C.char, cOptions C.CollectionOptions) *C.Result {
+	ctx := context.Background()
+	options := parseCollectionOptions(cOptions)
+	docID := C.GoString(cDocID)
+	filter := C.GoString(cFilter)
+	updater := C.GoString(cUpdater)
+
+	// Set the transaction
+	newctx, err := setTransactionOfCollectionCommand(ctx, cOptions)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+	ctx = newctx
+
+	// Get the collection
+	col, err := getCollectionForCollectionCommand(ctx, options)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+
+	// Set the context's collection to the selected one
+	ctx = context.WithValue(ctx, collectionContextKey{}, col)
+	ctx = context.WithValue(ctx, schemaNameContextKey{}, options.SchemaRoot.Value())
+
+	switch {
+	// Update the collection by filter
+	case filter != "":
+		var filterValue any
+		if err := json.Unmarshal([]byte(filter), &filterValue); err != nil {
+			return returnC(1, err.Error(), "")
+		}
+		res, err := col.UpdateWithFilter(ctx, filterValue, updater)
+		if err != nil {
+			return returnC(1, err.Error(), "")
+		}
+		jsonBytes, err := json.Marshal(res)
+		if err != nil {
+			return returnC(1, err.Error(), "")
+		}
+		return returnC(0, "", string(jsonBytes))
+
+	// Update the collection by docID
+	case docID != "":
+		newDocID, err := client.NewDocIDFromString(docID)
+		if err != nil {
+			return returnC(1, err.Error(), "")
+		}
+		doc, err := col.Get(ctx, newDocID, true)
+		if err != nil {
+			return returnC(1, err.Error(), "")
+		}
+		if err := doc.SetWithJSON([]byte(updater)); err != nil {
+			return returnC(1, err.Error(), "")
+		}
+		err = col.Update(ctx, doc)
+		if err != nil {
+			return returnC(1, err.Error(), "")
+		}
+		return returnC(0, "", "")
+	default:
+		return returnC(1, cerrNoDocIDOrFilter, "")
+	}
+
 }
