@@ -1,0 +1,129 @@
+//go:build cgo
+// +build cgo
+
+package main
+
+/*
+#include "result.h"
+*/
+import "C"
+
+import (
+	"context"
+	"encoding/json"
+	"strings"
+
+	"github.com/sourcenetwork/defradb/client"
+)
+
+//export indexCreate
+func indexCreate(cCollectionName *C.char, cIndexName *C.char, cFields *C.char, cIsUnique C.int) *C.Result {
+	ctx := context.Background()
+	collectionName := C.GoString(cCollectionName)
+	indexName := C.GoString(cIndexName)
+	isUnique := cIsUnique != 0
+
+	// Parse the comma separated fields string into an array of strings
+	fieldsStr := C.GoString(cFields)
+	var fieldsArg []string
+	if fieldsStr != "" {
+		fieldsArg = strings.Split(fieldsStr, ",")
+	} else {
+		fieldsArg = []string{}
+	}
+
+	// Parse the fields into an object, considering whether they are each ascending or descending
+	var fields []client.IndexedFieldDescription
+	for _, field := range fieldsArg {
+		// For each field, parse it into a field name and ascension order, separated by a colon
+		// If there is no colon, assume the ascension order is ASC by default
+		const asc = "ASC"
+		const desc = "DESC"
+		parts := strings.Split(field, ":")
+		fieldName := parts[0]
+		order := asc
+		if len(parts) == 2 {
+			order = strings.ToUpper(parts[1])
+			if order != asc && order != desc {
+				return returnC(1, cerrInvalidAscensionOrder, "")
+			}
+		} else if len(parts) > 2 {
+			return returnC(1, cerrInvalidIndexFieldDescription, "")
+		}
+		fields = append(fields, client.IndexedFieldDescription{
+			Name:       fieldName,
+			Descending: order == desc,
+		})
+	}
+
+	// Create a request object, and try to create the index
+	desc := client.IndexDescriptionCreateRequest{
+		Name:   indexName,
+		Fields: fields,
+		Unique: isUnique,
+	}
+	col, err := globalNode.DB.GetCollectionByName(ctx, collectionName)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+	descWithID, err := col.CreateIndex(ctx, desc)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+	jsonBytes, err := json.Marshal(descWithID)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+	return returnC(0, "", string(jsonBytes))
+}
+
+//export indexList
+func indexList(cCollectionName *C.char) *C.Result {
+	ctx := context.Background()
+	collectionName := C.GoString(cCollectionName)
+	switch {
+	// Get the indices associated with a given collection
+	case collectionName != "":
+		col, err := globalNode.DB.GetCollectionByName(ctx, collectionName)
+		if err != nil {
+			return returnC(1, err.Error(), "")
+		}
+		indices, err := col.GetIndexes(ctx)
+		if err != nil {
+			return returnC(1, err.Error(), "")
+		}
+		jsonBytes, err := json.Marshal(indices)
+		if err != nil {
+			return returnC(1, err.Error(), "")
+		}
+		return returnC(0, "", string(jsonBytes))
+	// Get all of the indices, because no collection was specified
+	default:
+		indices, err := globalNode.DB.GetAllIndexes(ctx)
+		if err != nil {
+			return returnC(1, err.Error(), "")
+		}
+		jsonBytes, err := json.Marshal(indices)
+		if err != nil {
+			return returnC(1, err.Error(), "")
+		}
+		return returnC(0, "", string(jsonBytes))
+	}
+}
+
+//export indexDrop
+func indexDrop(cCollectionName *C.char, cIndexName *C.char) *C.Result {
+	ctx := context.Background()
+	collectionName := C.GoString(cCollectionName)
+	indexName := C.GoString(cIndexName)
+	col, err := globalNode.DB.GetCollectionByName(ctx, collectionName)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+	err = col.DropIndex(ctx, indexName)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+	return returnC(0, "", "")
+
+}

@@ -67,7 +67,7 @@ func patchSchema(cPatch *C.char, cLensConfig *C.char, cSetActive C.int) *C.Resul
 	setActive := cSetActive != 0
 	patchString, lensString := C.GoString(cPatch), C.GoString(cLensConfig)
 
-	// Patch cannot be blank for this to work
+	// Patch cannot be blank
 	if cPatch == nil || patchString == "" {
 		return returnC(1, cerrEmptyPatch, "")
 	}

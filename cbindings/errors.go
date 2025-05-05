@@ -33,6 +33,10 @@ const (
 	cerrNoMatchingCollection string = "error: no collection matches the given criteria, could not set context"
 	cerrNoDocIDOrFilter      string = "error: performing the operation requires a DocID or filter"
 
+	// Index
+	cerrInvalidAscensionOrder        string = "invalid order: expected ASC or DESC for field: %v"
+	cerrInvalidIndexFieldDescription string = "invalid or malformed field description for field: %v"
+
 	// Txn
 	cerrCreatingTxn     string = "error creating transaction: %v"
 	cerrCommittingTxn   string = "error committing transaction: %v"
