@@ -20,9 +20,6 @@ import (
 	"github.com/sourcenetwork/immutable"
 )
 
-type collectionContextKey struct{}
-type schemaNameContextKey struct{}
-
 // Helper function
 // Parse the simple (not txn, not identity) options from the C struct into a CollectionFetchOptions object
 func parseCollectionOptions(cOptions C.CollectionOptions) client.CollectionFetchOptions {
@@ -63,6 +60,20 @@ func setTransactionOfCollectionCommand(ctx context.Context, cOptions C.Collectio
 }
 
 // Helper function
+// Set the identity associated with a given context from the value inside a C.CollectionOptions struct
+// If the identity string is blank, return the original context, unchanged
+func setIdentityOfCollectionCommand(ctx context.Context, cOptions C.CollectionOptions) (context.Context, error) {
+	identityStr := C.GoString(cOptions.identity)
+	if identityStr != "" {
+		newctx, err := contextWithIdentity(ctx, identityStr)
+		if err != nil {
+			return newctx, err
+		}
+	}
+	return ctx, nil
+}
+
+// Helper function
 func getCollectionForCollectionCommand(ctx context.Context, options client.CollectionFetchOptions) (client.Collection, error) {
 	// Get the collections that match the options criteria
 	cols, err := globalNode.DB.GetCollections(ctx, options)
@@ -90,12 +101,11 @@ func collectionCreate(cJSON *C.char, cIsEncrypted C.int, cEncryptedFields *C.cha
 	ctx := context.Background()
 	options := parseCollectionOptions(cOptions)
 
-	// Set the correct collection
-	foundcol, err := getCollectionForCollectionCommand(ctx, options)
+	// Attach the identity to the context
+	ctx, err := setIdentityOfCollectionCommand(ctx, cOptions)
 	if err != nil {
 		return returnC(1, err.Error(), "")
 	}
-	col := foundcol
 
 	// Set the transaction
 	newctx, err := setTransactionOfCollectionCommand(ctx, cOptions)
@@ -103,6 +113,13 @@ func collectionCreate(cJSON *C.char, cIsEncrypted C.int, cEncryptedFields *C.cha
 		return returnC(1, err.Error(), "")
 	}
 	ctx = newctx
+
+	// Set the correct collection
+	foundcol, err := getCollectionForCollectionCommand(ctx, options)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+	col := foundcol
 
 	// Set the context's collection to the selected one
 	ctx = context.WithValue(ctx, collectionContextKey{}, col)
@@ -128,7 +145,6 @@ func collectionCreate(cJSON *C.char, cIsEncrypted C.int, cEncryptedFields *C.cha
 	if err2 != nil {
 		return returnC(1, err2.Error(), "")
 	}
-
 	return returnC(0, "", "")
 }
 
@@ -139,8 +155,8 @@ func collectionDelete(cDocID *C.char, cFilter *C.char, cOptions C.CollectionOpti
 	ctx := context.Background()
 	options := parseCollectionOptions(cOptions)
 
-	// Set the correct collection
-	col, err := getCollectionForCollectionCommand(ctx, options)
+	// Attach the identity to the context
+	ctx, err := setIdentityOfCollectionCommand(ctx, cOptions)
 	if err != nil {
 		return returnC(1, err.Error(), "")
 	}
@@ -151,6 +167,12 @@ func collectionDelete(cDocID *C.char, cFilter *C.char, cOptions C.CollectionOpti
 		return returnC(1, err.Error(), "")
 	}
 	ctx = newctx
+
+	// Set the correct collection
+	col, err := getCollectionForCollectionCommand(ctx, options)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
 
 	switch {
 	case docID != "":
@@ -178,6 +200,12 @@ func collectionDelete(cDocID *C.char, cFilter *C.char, cOptions C.CollectionOpti
 func collectionDescribe(cOptions C.CollectionOptions) *C.Result {
 	ctx := context.Background()
 	options := parseCollectionOptions(cOptions)
+
+	// Attach the identity to the context
+	ctx, err := setIdentityOfCollectionCommand(ctx, cOptions)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
 
 	// Set the transaction
 	newctx, err := setTransactionOfCollectionCommand(ctx, cOptions)
@@ -210,6 +238,12 @@ func collectionDescribe(cOptions C.CollectionOptions) *C.Result {
 func collectionListDocIDs(cOptions C.CollectionOptions) *C.Result {
 	ctx := context.Background()
 	options := parseCollectionOptions(cOptions)
+
+	// Attach the identity to the context
+	ctx, err := setIdentityOfCollectionCommand(ctx, cOptions)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
 
 	// Set the transaction
 	newctx, err := setTransactionOfCollectionCommand(ctx, cOptions)
@@ -252,6 +286,12 @@ func collectionGet(cDocID *C.char, cShowDeleted C.int, cOptions C.CollectionOpti
 	docIDinput := C.GoString(cDocID)
 	showDeleted := cShowDeleted != 0
 
+	// Attach the identity to the context
+	ctx, err := setIdentityOfCollectionCommand(ctx, cOptions)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+
 	// Set the transaction
 	newctx, err := setTransactionOfCollectionCommand(ctx, cOptions)
 	if err != nil {
@@ -293,6 +333,12 @@ func collectionPatch(cPatch *C.char, cOptions C.CollectionOptions) *C.Result {
 	options := parseCollectionOptions(cOptions)
 	patch := C.GoString(cPatch)
 
+	// Attach the identity to the context
+	ctx, err := setIdentityOfCollectionCommand(ctx, cOptions)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+
 	// Set the transaction
 	newctx, err := setTransactionOfCollectionCommand(ctx, cOptions)
 	if err != nil {
@@ -326,6 +372,12 @@ func collectionUpdate(cDocID *C.char, cFilter *C.char, cUpdater *C.char, cOption
 	filter := C.GoString(cFilter)
 	updater := C.GoString(cUpdater)
 
+	// Attach the identity to the context
+	ctx, err := setIdentityOfCollectionCommand(ctx, cOptions)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+
 	// Set the transaction
 	newctx, err := setTransactionOfCollectionCommand(ctx, cOptions)
 	if err != nil {
@@ -344,7 +396,7 @@ func collectionUpdate(cDocID *C.char, cFilter *C.char, cUpdater *C.char, cOption
 	ctx = context.WithValue(ctx, schemaNameContextKey{}, options.SchemaRoot.Value())
 
 	switch {
-	// Update the collection by filter
+	// Update by filter
 	case filter != "":
 		var filterValue any
 		if err := json.Unmarshal([]byte(filter), &filterValue); err != nil {
@@ -360,7 +412,7 @@ func collectionUpdate(cDocID *C.char, cFilter *C.char, cUpdater *C.char, cOption
 		}
 		return returnC(0, "", string(jsonBytes))
 
-	// Update the collection by docID
+	// Update by docID
 	case docID != "":
 		newDocID, err := client.NewDocIDFromString(docID)
 		if err != nil {
