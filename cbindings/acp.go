@@ -10,8 +10,6 @@ import "C"
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 )
 
 //export acpAddPolicy
@@ -33,12 +31,7 @@ func acpAddPolicy(cIdentity *C.char, cPolicy *C.char) *C.Result {
 		return returnC(1, err.Error(), "")
 	}
 
-	// Marshall the JSON data and return it
-	dataJSON, err := json.Marshal(policyResult)
-	if err != nil {
-		return returnC(1, fmt.Sprintf(cerrMarshallingJSON, err), "")
-	}
-	return returnC(0, "", string(dataJSON))
+	return marshalJSONToCResult(policyResult)
 }
 
 //export acpAddRelationship
@@ -63,12 +56,7 @@ func acpAddRelationship(cIdentity *C.char, cCollection *C.char, cDocID *C.char, 
 		return returnC(1, err.Error(), "")
 	}
 
-	// Marshall the JSON data and return it
-	dataJSON, err := json.Marshal(result)
-	if err != nil {
-		return returnC(1, fmt.Sprintf(cerrMarshallingJSON, err), "")
-	}
-	return returnC(0, "", string(dataJSON))
+	return marshalJSONToCResult(result)
 }
 
 //export acpDeleteRelationship
@@ -93,10 +81,5 @@ func acpDeleteRelationship(cIdentity *C.char, cCollection *C.char, cDocID *C.cha
 		return returnC(1, err.Error(), "")
 	}
 
-	// Marshall the JSON data and return it
-	dataJSON, err := json.Marshal(result)
-	if err != nil {
-		return returnC(1, fmt.Sprintf(cerrMarshallingJSON, err), "")
-	}
-	return returnC(0, "", string(dataJSON))
+	return marshalJSONToCResult(result)
 }

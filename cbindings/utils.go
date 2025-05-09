@@ -11,6 +11,8 @@ import "C"
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
+	"fmt"
 
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 	"github.com/sourcenetwork/defradb/acp/identity"
@@ -41,4 +43,14 @@ func contextWithIdentity(ctx context.Context, privateKeyHex string) (context.Con
 	immutableIdentity := immutable.Some(newIdentity)
 	newctx := identity.WithContext(ctx, immutableIdentity)
 	return newctx, nil
+}
+
+// Helper function that seeks to marshall JSON into a CResult
+// The Result object will either contain the payload, if it works, or an error if it doesn't
+func marshalJSONToCResult(value interface{}) *C.Result {
+	dataJSON, err := json.Marshal(value)
+	if err != nil {
+		return returnC(1, fmt.Sprintf(cerrMarshallingJSON, err), "")
+	}
+	return returnC(0, "", string(dataJSON))
 }

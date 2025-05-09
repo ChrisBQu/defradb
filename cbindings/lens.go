@@ -72,12 +72,7 @@ func lensDown(cCollectionID C.uint, cDocuments *C.char) *C.Result {
 		return returnC(1, err.Error(), "")
 	}
 
-	// Marshall the value array and return it
-	jsonBytes, err := json.Marshal(value)
-	if err != nil {
-		return returnC(1, err.Error(), "")
-	}
-	return returnC(0, "", string(jsonBytes))
+	return marshalJSONToCResult(value)
 }
 
 //export lensUp
@@ -107,12 +102,7 @@ func lensUp(cCollectionID C.uint, cDocuments *C.char) *C.Result {
 		return returnC(1, err.Error(), "")
 	}
 
-	// Marshall the value array and return it
-	jsonBytes, err := json.Marshal(value)
-	if err != nil {
-		return returnC(1, err.Error(), "")
-	}
-	return returnC(0, "", string(jsonBytes))
+	return marshalJSONToCResult(value)
 }
 
 //export lensReload

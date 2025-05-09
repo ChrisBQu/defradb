@@ -44,12 +44,7 @@ func viewAdd(cQuery *C.char, cSDL *C.char, cTransform *C.char) *C.Result {
 		return returnC(1, err.Error(), "")
 	}
 
-	// Marshall into JSON and return
-	jsonBytes, err := json.MarshalIndent(defs, "", "  ")
-	if err != nil {
-		return returnC(1, err.Error(), "")
-	}
-	return returnC(0, "", string(jsonBytes))
+	return marshalJSONToCResult(defs)
 }
 
 //export viewRefresh

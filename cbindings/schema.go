@@ -52,13 +52,7 @@ func describeSchema(cName *C.char, cRoot *C.char, cVersion *C.char) *C.Result {
 	if err != nil {
 		return returnC(1, fmt.Sprintf(cerrGettingSchema, err), "")
 	}
-	bytes, err := json.MarshalIndent(schemas, "", "  ")
-	if err != nil {
-		return returnC(1, fmt.Sprintf(cerrMarshallingJSON, err), "")
-	}
-
-	jsonString := string(bytes)
-	return returnC(0, "", jsonString)
+	return marshalJSONToCResult(schemas)
 }
 
 //export patchSchema

@@ -70,11 +70,8 @@ func indexCreate(cCollectionName *C.char, cIndexName *C.char, cFields *C.char, c
 	if err != nil {
 		return returnC(1, err.Error(), "")
 	}
-	jsonBytes, err := json.Marshal(descWithID)
-	if err != nil {
-		return returnC(1, err.Error(), "")
-	}
-	return returnC(0, "", string(jsonBytes))
+
+	return marshalJSONToCResult(descWithID)
 }
 
 //export indexList

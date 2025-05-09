@@ -226,12 +226,7 @@ func collectionDescribe(cOptions C.CollectionOptions) *C.Result {
 		colDesc[i] = col.Definition()
 	}
 
-	// Marshall the descriptions into JSON and return
-	jsonBytes, err := json.MarshalIndent(colDesc, "", "  ")
-	if err != nil {
-		return returnC(1, err.Error(), "")
-	}
-	return returnC(0, "", string(jsonBytes))
+	return marshalJSONToCResult(colDesc)
 }
 
 //export collectionListDocIDs

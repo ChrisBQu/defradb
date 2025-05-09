@@ -10,8 +10,6 @@ import "C"
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"strings"
 )
 
@@ -39,11 +37,7 @@ func executeQuery(cQuery *C.char) *C.Result {
 	if !ok || dataMap == nil || len(dataMap) == 0 {
 		return returnC(1, "GraphQL response data is nil or empty.", "")
 	}
-	dataJSON, err := json.Marshal(dataMap)
-	if err != nil {
-		return returnC(1, fmt.Sprintf(cerrMarshallingJSON, err), "")
-	}
-	return returnC(0, "", string(dataJSON))
+	return marshalJSONToCResult(dataMap)
 }
 
 func main() {}

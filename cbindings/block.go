@@ -1,0 +1,40 @@
+//go:build cgo
+// +build cgo
+
+package main
+
+/*
+#include "result.h"
+*/
+import "C"
+
+import (
+	"context"
+
+	"github.com/sourcenetwork/defradb/crypto"
+)
+
+//export blockVerifySignature
+func blockVerifySignature(cKeyType *C.char, cPublicKey *C.char, cCID *C.char) *C.Result {
+	ctx := context.Background()
+	keyTypeStr := C.GoString(cKeyType)
+	pubKeyStr := C.GoString(cPublicKey)
+	CIDStr := C.GoString(cCID)
+
+	// Create a public key object of the specified type (Secp256k1 by default)
+	keyType := crypto.KeyTypeSecp256k1
+	if keyTypeStr != "" {
+		keyType = crypto.KeyType(keyTypeStr)
+	}
+	pubKey, err := crypto.PublicKeyFromString(keyType, pubKeyStr)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+
+	// Verify the signature, and either return success status, or an error
+	err = globalNode.DB.VerifySignature(ctx, CIDStr, pubKey)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+	return returnC(0, "", "Block's signature verified.")
+}
