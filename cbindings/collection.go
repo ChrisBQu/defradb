@@ -67,8 +67,9 @@ func setIdentityOfCollectionCommand(ctx context.Context, cOptions C.CollectionOp
 	if identityStr != "" {
 		newctx, err := contextWithIdentity(ctx, identityStr)
 		if err != nil {
-			return newctx, err
+			return ctx, err
 		}
+		return newctx, nil
 	}
 	return ctx, nil
 }
@@ -267,11 +268,8 @@ func collectionListDocIDs(cOptions C.CollectionOptions) *C.Result {
 		}
 		docIDs = append(docIDs, doc.ID.String())
 	}
-	jsonBytes, err := json.MarshalIndent(docIDs, "", "  ")
-	if err != nil {
-		return returnC(1, err.Error(), "")
-	}
-	return returnC(0, "", string(jsonBytes))
+
+	return marshalJSONToCResult(docIDs)
 }
 
 //export collectionGet
@@ -314,12 +312,7 @@ func collectionGet(cDocID *C.char, cShowDeleted C.int, cOptions C.CollectionOpti
 		return returnC(1, err.Error(), "")
 	}
 
-	// Marshall into JSON and return
-	jsonBytes, err := json.MarshalIndent(docMap, "", "  ")
-	if err != nil {
-		return returnC(1, err.Error(), "")
-	}
-	return returnC(0, "", string(jsonBytes))
+	return marshalJSONToCResult(docMap)
 }
 
 //export collectionPatch

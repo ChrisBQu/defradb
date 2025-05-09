@@ -14,9 +14,17 @@ import (
 )
 
 //export executeQuery
-func executeQuery(cQuery *C.char) *C.Result {
+func executeQuery(cQuery *C.char, cIdentity *C.char) *C.Result {
 	query := C.GoString(cQuery)
+	identityStr := C.GoString(cIdentity)
 	ctx := context.Background()
+
+	// Attach the identity
+	newctx, err := contextWithIdentity(ctx, identityStr)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+	ctx = newctx
 
 	res := globalNode.DB.ExecRequest(ctx, query)
 
