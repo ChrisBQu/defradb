@@ -443,8 +443,10 @@ build-c-shared-android:
 build-c-shared-linux:
 	@echo "Building c-shared library for Linux..."
 	@rm -f build/libdefradb.so build/libdefradb.h
-	@CGO_ENABLED=1 GOARCH=amd64 GOOS=linux go build -tags cshared -buildmode=c-shared -o build/libdefradb.so ./cbindings
+	@CGO_ENABLED=1 GOARCH=amd64 GOOS=linux go build -tags cshared $(BUILD_FLAGS) \
+		-buildmode=c-shared -o build/libdefradb.so ./cbindings
 	@echo "Build complete: build/libdefradb.so"
+
 	
 build-c-shared-windows:
 	@echo "Building c-shared library for Windows..."
