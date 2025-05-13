@@ -15,6 +15,7 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/sourcenetwork/defradb/net"
 	"github.com/sourcenetwork/defradb/node"
 )
 
@@ -31,6 +32,8 @@ func returnC(status int, errortext string, valuetext string) *C.Result {
 
 var globalNode *node.Node
 var nodeReady = make(chan struct{})
+
+var listeningIPs = []string{"/ip4/127.0.0.1/tcp/9171"}
 
 //export initNode
 func initNode(cPath *C.char) *C.Result {
@@ -57,9 +60,9 @@ func initNode(cPath *C.char) *C.Result {
 	// Try to create the node
 	globalNode, err = node.New(
 		ctx,
-		node.WithDisableAPI(true),
 		node.WithStorePath(dbPath),
 		node.WithLensRuntime(node.Wazero),
+		net.WithListenAddresses(listeningIPs...),
 	)
 	if err != nil {
 		return returnC(1, fmt.Sprintf(cerrCreatingNode, err), "")

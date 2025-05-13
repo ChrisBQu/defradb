@@ -10,18 +10,24 @@ import "C"
 
 import (
 	"context"
-	"encoding/json"
 	"strings"
 
 	"github.com/sourcenetwork/defradb/client"
 )
 
 //export indexCreate
-func indexCreate(cCollectionName *C.char, cIndexName *C.char, cFields *C.char, cIsUnique C.int) *C.Result {
+func indexCreate(cCollectionName *C.char, cIndexName *C.char, cFields *C.char, cIsUnique C.int, cTxnID C.ulonglong) *C.Result {
 	ctx := context.Background()
 	collectionName := C.GoString(cCollectionName)
 	indexName := C.GoString(cIndexName)
 	isUnique := cIsUnique != 0
+
+	// Set the transaction
+	newctx, err := contextWithTransaction(ctx, cTxnID)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+	ctx = newctx
 
 	// Parse the comma separated fields string into an array of strings
 	fieldsStr := C.GoString(cFields)
@@ -75,9 +81,17 @@ func indexCreate(cCollectionName *C.char, cIndexName *C.char, cFields *C.char, c
 }
 
 //export indexList
-func indexList(cCollectionName *C.char) *C.Result {
+func indexList(cCollectionName *C.char, cTxnID C.ulonglong) *C.Result {
 	ctx := context.Background()
 	collectionName := C.GoString(cCollectionName)
+
+	// Set the transaction
+	newctx, err := contextWithTransaction(ctx, cTxnID)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+	ctx = newctx
+
 	switch {
 	// Get the indices associated with a given collection
 	case collectionName != "":
@@ -89,30 +103,31 @@ func indexList(cCollectionName *C.char) *C.Result {
 		if err != nil {
 			return returnC(1, err.Error(), "")
 		}
-		jsonBytes, err := json.Marshal(indices)
-		if err != nil {
-			return returnC(1, err.Error(), "")
-		}
-		return returnC(0, "", string(jsonBytes))
+		return marshalJSONToCResult(indices)
 	// Get all of the indices, because no collection was specified
 	default:
 		indices, err := globalNode.DB.GetAllIndexes(ctx)
 		if err != nil {
 			return returnC(1, err.Error(), "")
 		}
-		jsonBytes, err := json.Marshal(indices)
-		if err != nil {
-			return returnC(1, err.Error(), "")
-		}
-		return returnC(0, "", string(jsonBytes))
+		return marshalJSONToCResult(indices)
 	}
 }
 
 //export indexDrop
-func indexDrop(cCollectionName *C.char, cIndexName *C.char) *C.Result {
+func indexDrop(cCollectionName *C.char, cIndexName *C.char, cTxnID C.ulonglong) *C.Result {
 	ctx := context.Background()
 	collectionName := C.GoString(cCollectionName)
 	indexName := C.GoString(cIndexName)
+
+	// Set the transaction
+	newctx, err := contextWithTransaction(ctx, cTxnID)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+	ctx = newctx
+
+	// Get collection and return
 	col, err := globalNode.DB.GetCollectionByName(ctx, collectionName)
 	if err != nil {
 		return returnC(1, err.Error(), "")

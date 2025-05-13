@@ -13,13 +13,20 @@ import (
 )
 
 //export acpAddPolicy
-func acpAddPolicy(cIdentity *C.char, cPolicy *C.char) *C.Result {
+func acpAddPolicy(cIdentity *C.char, cPolicy *C.char, cTxnID C.ulonglong) *C.Result {
 	ctx := context.Background()
 	policy := C.GoString(cPolicy)
 	identityStr := C.GoString(cIdentity)
 
 	// Attach the identity to the context
 	newctx, err := contextWithIdentity(ctx, identityStr)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+	ctx = newctx
+
+	// Set the transaction
+	newctx, err = contextWithTransaction(ctx, cTxnID)
 	if err != nil {
 		return returnC(1, err.Error(), "")
 	}
@@ -35,7 +42,7 @@ func acpAddPolicy(cIdentity *C.char, cPolicy *C.char) *C.Result {
 }
 
 //export acpAddRelationship
-func acpAddRelationship(cIdentity *C.char, cCollection *C.char, cDocID *C.char, cRelation *C.char, cActor *C.char) *C.Result {
+func acpAddRelationship(cIdentity *C.char, cCollection *C.char, cDocID *C.char, cRelation *C.char, cActor *C.char, cTxnID C.ulonglong) *C.Result {
 	ctx := context.Background()
 	collectionArg := C.GoString(cCollection)
 	docIDArg := C.GoString(cDocID)
@@ -45,6 +52,13 @@ func acpAddRelationship(cIdentity *C.char, cCollection *C.char, cDocID *C.char, 
 
 	// Attach the identity to the context
 	newctx, err := contextWithIdentity(ctx, identityStr)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+	ctx = newctx
+
+	// Set the transaction
+	newctx, err = contextWithTransaction(ctx, cTxnID)
 	if err != nil {
 		return returnC(1, err.Error(), "")
 	}
@@ -60,7 +74,7 @@ func acpAddRelationship(cIdentity *C.char, cCollection *C.char, cDocID *C.char, 
 }
 
 //export acpDeleteRelationship
-func acpDeleteRelationship(cIdentity *C.char, cCollection *C.char, cDocID *C.char, cRelation *C.char, cActor *C.char) *C.Result {
+func acpDeleteRelationship(cIdentity *C.char, cCollection *C.char, cDocID *C.char, cRelation *C.char, cActor *C.char, cTxnID C.ulonglong) *C.Result {
 	ctx := context.Background()
 	collectionArg := C.GoString(cCollection)
 	docIDArg := C.GoString(cDocID)
@@ -70,6 +84,13 @@ func acpDeleteRelationship(cIdentity *C.char, cCollection *C.char, cDocID *C.cha
 
 	// Attach the identity to the context
 	newctx, err := contextWithIdentity(ctx, identityStr)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+	ctx = newctx
+
+	// Set the transaction
+	newctx, err = contextWithTransaction(ctx, cTxnID)
 	if err != nil {
 		return returnC(1, err.Error(), "")
 	}

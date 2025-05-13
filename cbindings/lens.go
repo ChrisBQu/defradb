@@ -20,11 +20,18 @@ import (
 )
 
 //export lensSet
-func lensSet(cSrc *C.char, cDst *C.char, cCfg *C.char) *C.Result {
+func lensSet(cSrc *C.char, cDst *C.char, cCfg *C.char, cTxnID C.ulonglong) *C.Result {
 	ctx := context.Background()
 	srcSchemaVersionID := C.GoString(cSrc)
 	dstSchemaVersionID := C.GoString(cDst)
 	lensCfgJson := C.GoString(cCfg)
+
+	// Set the transaction
+	newctx, err := contextWithTransaction(ctx, cTxnID)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+	ctx = newctx
 
 	// Parse the lens config string into a client.LensConfig
 	decoder := json.NewDecoder(strings.NewReader(lensCfgJson))
@@ -38,7 +45,7 @@ func lensSet(cSrc *C.char, cDst *C.char, cCfg *C.char) *C.Result {
 		DestinationSchemaVersionID: dstSchemaVersionID,
 		Lens:                       lensCfg,
 	}
-	err := globalNode.DB.SetMigration(ctx, migrationCfg)
+	err = globalNode.DB.SetMigration(ctx, migrationCfg)
 	if err != nil {
 		return returnC(1, err.Error(), "")
 	}
@@ -46,10 +53,17 @@ func lensSet(cSrc *C.char, cDst *C.char, cCfg *C.char) *C.Result {
 }
 
 //export lensDown
-func lensDown(cCollectionID C.uint, cDocuments *C.char) *C.Result {
+func lensDown(cCollectionID C.uint, cDocuments *C.char, cTxnID C.ulonglong) *C.Result {
 	ctx := context.Background()
 	collectionID := uint32(cCollectionID)
 	srcData := []byte(C.GoString(cDocuments))
+
+	// Set the transaction
+	newctx, err := contextWithTransaction(ctx, cTxnID)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+	ctx = newctx
 
 	// Decode the input documents
 	var src []map[string]any
@@ -76,10 +90,17 @@ func lensDown(cCollectionID C.uint, cDocuments *C.char) *C.Result {
 }
 
 //export lensUp
-func lensUp(cCollectionID C.uint, cDocuments *C.char) *C.Result {
+func lensUp(cCollectionID C.uint, cDocuments *C.char, cTxnID C.ulonglong) *C.Result {
 	ctx := context.Background()
 	collectionID := uint32(cCollectionID)
 	srcData := []byte(C.GoString(cDocuments))
+
+	// Set the transaction
+	newctx, err := contextWithTransaction(ctx, cTxnID)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+	ctx = newctx
 
 	// Decode the input documents
 	var src []map[string]any
@@ -106,9 +127,18 @@ func lensUp(cCollectionID C.uint, cDocuments *C.char) *C.Result {
 }
 
 //export lensReload
-func lensReload() *C.Result {
+func lensReload(cTxnID C.ulonglong) *C.Result {
 	ctx := context.Background()
-	err := globalNode.DB.LensRegistry().ReloadLenses(ctx)
+
+	// Set the transaction
+	newctx, err := contextWithTransaction(ctx, cTxnID)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+	ctx = newctx
+
+	// Reload the lenses and return
+	err = globalNode.DB.LensRegistry().ReloadLenses(ctx)
 	if err != nil {
 		return returnC(1, err.Error(), "")
 	}
@@ -116,10 +146,17 @@ func lensReload() *C.Result {
 }
 
 //export lensSetRegistry
-func lensSetRegistry(cCollectionID C.uint, cLensCfg *C.char) *C.Result {
+func lensSetRegistry(cCollectionID C.uint, cLensCfg *C.char, cTxnID C.ulonglong) *C.Result {
 	ctx := context.Background()
 	collectionID := uint32(cCollectionID)
 	lensCfgJSON := C.GoString(cLensCfg)
+
+	// Set the transaction
+	newctx, err := contextWithTransaction(ctx, cTxnID)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+	ctx = newctx
 
 	// Create a model.Lens from the lens configuration
 	decoder := json.NewDecoder(strings.NewReader(lensCfgJSON))
@@ -130,10 +167,9 @@ func lensSetRegistry(cCollectionID C.uint, cLensCfg *C.char) *C.Result {
 	}
 
 	// Set migration and return
-	err := globalNode.DB.LensRegistry().SetMigration(ctx, collectionID, lensCfg)
+	err = globalNode.DB.LensRegistry().SetMigration(ctx, collectionID, lensCfg)
 	if err != nil {
 		return returnC(1, err.Error(), "")
 	}
 	return returnC(0, "", "")
-
 }

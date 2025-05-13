@@ -21,10 +21,18 @@ import (
 )
 
 //export addSchema
-func addSchema(cSchema *C.char) *C.Result {
+func addSchema(cSchema *C.char, cTxnID C.ulonglong) *C.Result {
 	newSchema := C.GoString(cSchema)
 	ctx := context.Background()
-	_, err := globalNode.DB.AddSchema(ctx, newSchema)
+
+	// Set the transaction
+	newctx, err := contextWithTransaction(ctx, cTxnID)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+	ctx = newctx
+
+	_, err = globalNode.DB.AddSchema(ctx, newSchema)
 	if err != nil {
 		return returnC(1, fmt.Sprintf(cerrAddingSchema, err), "")
 	}
@@ -32,9 +40,16 @@ func addSchema(cSchema *C.char) *C.Result {
 }
 
 //export describeSchema
-func describeSchema(cName *C.char, cRoot *C.char, cVersion *C.char) *C.Result {
+func describeSchema(cName *C.char, cRoot *C.char, cVersion *C.char, cTxnID C.ulonglong) *C.Result {
 	ctx := context.Background()
 	options := client.SchemaFetchOptions{}
+
+	// Set the transaction
+	newctx, err := contextWithTransaction(ctx, cTxnID)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+	ctx = newctx
 
 	// Set the configuration options from the passed in parameters
 	if cVersion != nil && C.GoString(cVersion) != "" {
@@ -56,10 +71,17 @@ func describeSchema(cName *C.char, cRoot *C.char, cVersion *C.char) *C.Result {
 }
 
 //export patchSchema
-func patchSchema(cPatch *C.char, cLensConfig *C.char, cSetActive C.int) *C.Result {
+func patchSchema(cPatch *C.char, cLensConfig *C.char, cSetActive C.int, cTxnID C.ulonglong) *C.Result {
 	ctx := context.Background()
 	setActive := cSetActive != 0
 	patchString, lensString := C.GoString(cPatch), C.GoString(cLensConfig)
+
+	// Set the transaction
+	newctx, err := contextWithTransaction(ctx, cTxnID)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+	ctx = newctx
 
 	// Patch cannot be blank
 	if cPatch == nil || patchString == "" {
@@ -79,7 +101,7 @@ func patchSchema(cPatch *C.char, cLensConfig *C.char, cSetActive C.int) *C.Resul
 	}
 
 	// Try to patch the schema, and return the result
-	err := globalNode.DB.PatchSchema(ctx, patchString, migration, setActive)
+	err = globalNode.DB.PatchSchema(ctx, patchString, migration, setActive)
 	if err != nil {
 		return returnC(1, fmt.Sprintf(cerrPatchingSchema, err), "")
 	}
@@ -87,9 +109,17 @@ func patchSchema(cPatch *C.char, cLensConfig *C.char, cSetActive C.int) *C.Resul
 }
 
 //export setActiveSchema
-func setActiveSchema(cVersion *C.char) *C.Result {
+func setActiveSchema(cVersion *C.char, cTxnID C.ulonglong) *C.Result {
 	ctx := context.Background()
-	err := globalNode.DB.SetActiveSchemaVersion(ctx, C.GoString(cVersion))
+
+	// Set the transaction
+	newctx, err := contextWithTransaction(ctx, cTxnID)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+	ctx = newctx
+
+	err = globalNode.DB.SetActiveSchemaVersion(ctx, C.GoString(cVersion))
 	if err != nil {
 		return returnC(1, fmt.Sprintf(cerrSetActiveSchema, err), "")
 	}

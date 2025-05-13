@@ -20,11 +20,18 @@ import (
 )
 
 //export viewAdd
-func viewAdd(cQuery *C.char, cSDL *C.char, cTransform *C.char) *C.Result {
+func viewAdd(cQuery *C.char, cSDL *C.char, cTransform *C.char, cTxnID C.ulonglong) *C.Result {
 	ctx := context.Background()
 	query := C.GoString(cQuery)
 	sdl := C.GoString(cSDL)
 	lensCfgJson := C.GoString(cTransform)
+
+	// Set the transaction
+	newctx, err := contextWithTransaction(ctx, cTxnID)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+	ctx = newctx
 
 	// Decode the lens configuration into a lens
 	var transform immutable.Option[model.Lens]
@@ -48,12 +55,19 @@ func viewAdd(cQuery *C.char, cSDL *C.char, cTransform *C.char) *C.Result {
 }
 
 //export viewRefresh
-func viewRefresh(cViewName *C.char, cSchemaRoot *C.char, cVersionID *C.char, cGetInactive C.int) *C.Result {
+func viewRefresh(cViewName *C.char, cSchemaRoot *C.char, cVersionID *C.char, cGetInactive C.int, cTxnID C.ulonglong) *C.Result {
 	ctx := context.Background()
 	name := C.GoString(cViewName)
 	schemaRoot := C.GoString(cSchemaRoot)
 	versionID := C.GoString(cVersionID)
 	getInactive := cGetInactive != 0
+
+	// Set the transaction
+	newctx, err := contextWithTransaction(ctx, cTxnID)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+	ctx = newctx
 
 	// Parse the input parameters into a CollectionFetchOptions object
 	options := client.CollectionFetchOptions{}
@@ -71,7 +85,7 @@ func viewRefresh(cViewName *C.char, cSchemaRoot *C.char, cVersionID *C.char, cGe
 	}
 
 	// Refresh the views and return
-	err := globalNode.DB.RefreshViews(ctx, options)
+	err = globalNode.DB.RefreshViews(ctx, options)
 	if err != nil {
 		return returnC(1, err.Error(), "")
 	}

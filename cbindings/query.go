@@ -14,13 +14,20 @@ import (
 )
 
 //export executeQuery
-func executeQuery(cQuery *C.char, cIdentity *C.char) *C.Result {
+func executeQuery(cQuery *C.char, cIdentity *C.char, cTxnID C.ulonglong) *C.Result {
 	query := C.GoString(cQuery)
 	identityStr := C.GoString(cIdentity)
 	ctx := context.Background()
 
 	// Attach the identity
 	newctx, err := contextWithIdentity(ctx, identityStr)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+	ctx = newctx
+
+	// Set the transaction
+	newctx, err = contextWithTransaction(ctx, cTxnID)
 	if err != nil {
 		return returnC(1, err.Error(), "")
 	}
