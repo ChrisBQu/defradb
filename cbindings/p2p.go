@@ -11,7 +11,6 @@ import "C"
 import (
 	"context"
 	"encoding/json"
-	"strings"
 
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/sourcenetwork/defradb/client"
@@ -37,6 +36,7 @@ func P2PgetAllReplicators() *C.Result {
 func P2PsetReplicator(cCollections *C.char, cPeer *C.char, cTxnID C.ulonglong) *C.Result {
 	ctx := context.Background()
 	peerStr := C.GoString(cPeer)
+	colArgs := splitCommaSeparatedCString(cCollections)
 
 	// Set the transaction
 	newctx, err := contextWithTransaction(ctx, cTxnID)
@@ -44,15 +44,6 @@ func P2PsetReplicator(cCollections *C.char, cPeer *C.char, cTxnID C.ulonglong) *
 		return returnC(1, err.Error(), "")
 	}
 	ctx = newctx
-
-	// Parse the comma separated collections string into an array of strings
-	colStr := C.GoString(cCollections)
-	var colArgs []string
-	if colStr != "" {
-		colArgs = strings.Split(colStr, ",")
-	} else {
-		colArgs = []string{}
-	}
 
 	// Create the replicator parameters
 	var info peer.AddrInfo
@@ -76,6 +67,7 @@ func P2PsetReplicator(cCollections *C.char, cPeer *C.char, cTxnID C.ulonglong) *
 func P2PdeleteReplicator(cCollections *C.char, cPeer *C.char, cTxnID C.ulonglong) *C.Result {
 	ctx := context.Background()
 	peerStr := C.GoString(cPeer)
+	colArgs := splitCommaSeparatedCString(cCollections)
 
 	// Set the transaction
 	newctx, err := contextWithTransaction(ctx, cTxnID)
@@ -83,15 +75,6 @@ func P2PdeleteReplicator(cCollections *C.char, cPeer *C.char, cTxnID C.ulonglong
 		return returnC(1, err.Error(), "")
 	}
 	ctx = newctx
-
-	// Parse the comma separated collections string into an array of strings
-	colStr := C.GoString(cCollections)
-	var colArgs []string
-	if colStr != "" {
-		colArgs = strings.Split(colStr, ",")
-	} else {
-		colArgs = []string{}
-	}
 
 	// Create the replicator parameters
 	var info peer.AddrInfo
@@ -114,6 +97,7 @@ func P2PdeleteReplicator(cCollections *C.char, cPeer *C.char, cTxnID C.ulonglong
 //export P2PcollectionAdd
 func P2PcollectionAdd(cCollections *C.char, cTxnID C.ulonglong) *C.Result {
 	ctx := context.Background()
+	colArgs := splitCommaSeparatedCString(cCollections)
 
 	// Set the transaction
 	newctx, err := contextWithTransaction(ctx, cTxnID)
@@ -121,15 +105,6 @@ func P2PcollectionAdd(cCollections *C.char, cTxnID C.ulonglong) *C.Result {
 		return returnC(1, err.Error(), "")
 	}
 	ctx = newctx
-
-	// Parse the comma separated collections string into an array of strings
-	colStr := C.GoString(cCollections)
-	var colArgs []string
-	if colStr != "" {
-		colArgs = strings.Split(colStr, ",")
-	} else {
-		colArgs = []string{}
-	}
 
 	// Try to add the collections, then return the result
 	err = globalNode.DB.AddP2PCollections(ctx, colArgs)
@@ -142,6 +117,7 @@ func P2PcollectionAdd(cCollections *C.char, cTxnID C.ulonglong) *C.Result {
 //export P2PcollectionRemove
 func P2PcollectionRemove(cCollections *C.char, cTxnID C.ulonglong) *C.Result {
 	ctx := context.Background()
+	colArgs := splitCommaSeparatedCString(cCollections)
 
 	// Set the transaction
 	newctx, err := contextWithTransaction(ctx, cTxnID)
@@ -149,15 +125,6 @@ func P2PcollectionRemove(cCollections *C.char, cTxnID C.ulonglong) *C.Result {
 		return returnC(1, err.Error(), "")
 	}
 	ctx = newctx
-
-	// Parse the comma separated collections string into an array of strings
-	colStr := C.GoString(cCollections)
-	var colArgs []string
-	if colStr != "" {
-		colArgs = strings.Split(colStr, ",")
-	} else {
-		colArgs = []string{}
-	}
 
 	// Try to remove the collections, then return the result
 	err = globalNode.DB.RemoveP2PCollections(ctx, colArgs)

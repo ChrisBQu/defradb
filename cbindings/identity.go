@@ -9,6 +9,8 @@ package main
 import "C"
 
 import (
+	"context"
+
 	"github.com/sourcenetwork/defradb/acp/identity"
 	"github.com/sourcenetwork/defradb/crypto"
 )
@@ -28,4 +30,17 @@ func identityNew(cKeyType *C.char) *C.Result {
 	}
 
 	return marshalJSONToCResult(newIdentity.IntoRawIdentity())
+}
+
+//export nodeIdentity
+func nodeIdentity() *C.Result {
+	ctx := context.Background()
+	identity, err := globalNode.DB.GetNodeIdentity(ctx)
+	if err != nil {
+		return returnC(1, err.Error(), "")
+	}
+	if identity.HasValue() {
+		return marshalJSONToCResult(identity.Value())
+	}
+	return returnC(0, "", "Node has no identity assigned to it.")
 }

@@ -13,31 +13,18 @@ import (
 	"fmt"
 	"os"
 	"time"
-	"unsafe"
 
 	"github.com/sourcenetwork/defradb/net"
 	"github.com/sourcenetwork/defradb/node"
 )
 
-// Helper function which builds a return struct from Go to C
-func returnC(status int, errortext string, valuetext string) *C.Result {
-	result := (*C.Result)(C.malloc(C.size_t(unsafe.Sizeof(C.Result{}))))
-
-	result.status = C.int(status)
-	result.error = C.CString(errortext)
-	result.value = C.CString(valuetext)
-
-	return result
-}
-
 var globalNode *node.Node
 var nodeReady = make(chan struct{})
 
-var listeningIPs = []string{"/ip4/127.0.0.1/tcp/9171"}
-
-//export initNode
-func initNode(cPath *C.char) *C.Result {
-	dbPath := C.GoString(cPath)
+//export nodeInit
+func nodeInit(cOptions C.NodeInitOptions) *C.Result {
+	dbPath := C.GoString(cOptions.dbPath)
+	listeningAddresses := splitCommaSeparatedCString(cOptions.listeningAddresses)
 	ctx := context.Background()
 
 	if globalNode != nil {
@@ -62,7 +49,7 @@ func initNode(cPath *C.char) *C.Result {
 		ctx,
 		node.WithStorePath(dbPath),
 		node.WithLensRuntime(node.Wazero),
-		net.WithListenAddresses(listeningIPs...),
+		net.WithListenAddresses(listeningAddresses...),
 	)
 	if err != nil {
 		return returnC(1, fmt.Sprintf(cerrCreatingNode, err), "")
@@ -71,9 +58,8 @@ func initNode(cPath *C.char) *C.Result {
 	return returnC(0, "", "")
 }
 
-//export startNode
-func startNode() *C.Result {
-
+//export nodeStart
+func nodeStart() *C.Result {
 	// Fail early if the node has not been initialized
 	if globalNode == nil {
 		return returnC(1, cerrUninitializedNode, "")
@@ -101,8 +87,8 @@ func startNode() *C.Result {
 	}
 }
 
-//export stopNode
-func stopNode() *C.Result {
+//export nodeStop
+func nodeStop() *C.Result {
 	if globalNode == nil {
 		return returnC(1, cerrStoppedNode, "")
 	}

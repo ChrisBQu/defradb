@@ -21,6 +21,7 @@ func indexCreate(cCollectionName *C.char, cIndexName *C.char, cFields *C.char, c
 	collectionName := C.GoString(cCollectionName)
 	indexName := C.GoString(cIndexName)
 	isUnique := cIsUnique != 0
+	fieldsArg := splitCommaSeparatedCString(cFields)
 
 	// Set the transaction
 	newctx, err := contextWithTransaction(ctx, cTxnID)
@@ -28,15 +29,6 @@ func indexCreate(cCollectionName *C.char, cIndexName *C.char, cFields *C.char, c
 		return returnC(1, err.Error(), "")
 	}
 	ctx = newctx
-
-	// Parse the comma separated fields string into an array of strings
-	fieldsStr := C.GoString(cFields)
-	var fieldsArg []string
-	if fieldsStr != "" {
-		fieldsArg = strings.Split(fieldsStr, ",")
-	} else {
-		fieldsArg = []string{}
-	}
 
 	// Parse the fields into an object, considering whether they are each ascending or descending
 	var fields []client.IndexedFieldDescription

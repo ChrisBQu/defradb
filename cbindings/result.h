@@ -17,4 +17,9 @@ typedef struct {
     int getInactive;
 } CollectionOptions;
 
+typedef struct {
+    const char* dbPath;
+    const char* listeningAddresses;
+} NodeInitOptions;
+
 #endif // RESULT_H

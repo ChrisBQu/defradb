@@ -13,6 +13,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strings"
+	"unsafe"
 
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 	"github.com/sourcenetwork/defradb/acp/identity"
@@ -24,6 +26,17 @@ import (
 type collectionContextKey struct{}
 type schemaNameContextKey struct{}
 type identityContextKey struct{}
+
+// Helper function which builds a return struct from Go to C
+func returnC(status int, errortext string, valuetext string) *C.Result {
+	result := (*C.Result)(C.malloc(C.size_t(unsafe.Sizeof(C.Result{}))))
+
+	result.status = C.int(status)
+	result.error = C.CString(errortext)
+	result.value = C.CString(valuetext)
+
+	return result
+}
 
 // Helper function that attaches an identity to a context, returning the new context
 func contextWithIdentity(ctx context.Context, privateKeyHex string) (context.Context, error) {
@@ -67,4 +80,16 @@ func marshalJSONToCResult(value interface{}) *C.Result {
 		return returnC(1, fmt.Sprintf(cerrMarshallingJSON, err), "")
 	}
 	return returnC(0, "", string(dataJSON))
+}
+
+// Helper function that takes a comma separated const char * and returns an array of Go strings
+func splitCommaSeparatedCString(cStr *C.char) []string {
+	baseStr := C.GoString(cStr)
+	var retArr []string
+	if baseStr != "" {
+		retArr = strings.Split(baseStr, ",")
+	} else {
+		retArr = []string{}
+	}
+	return retArr
 }
