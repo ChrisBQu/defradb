@@ -12,14 +12,15 @@ const (
 	cerrStartingNode           string = "error starting the node: %v"
 	cerrStoppedNode            string = "error stopping node: node is not initialized, or was already stopped"
 	cerrStoppingNode           string = "error stopping node: %v"
+	cerrParsingReplicatorTimes string = "error parsing replicator retry time intervals: %v"
+	cerrNegativeReplicatorTime string = "error: negative time intervals are not allowed for replicator retries"
 
 	// Schema
-	cerrAddingSchema      string = "error adding schema: %v"
-	cerrGettingSchema     string = "error getting schema: %v"
-	cerrPatchingSchema    string = "error patching schema: %v"
-	cerrSetActiveSchema   string = "error setting active version of schema: %v"
-	cerrEmptyPatch        string = "patch cannot be empty"
-	cerrInvalidLensConfig string = "invalid lens configuration: %v"
+	cerrAddingSchema    string = "error adding schema: %v"
+	cerrGettingSchema   string = "error getting schema: %v"
+	cerrPatchingSchema  string = "error patching schema: %v"
+	cerrSetActiveSchema string = "error setting active version of schema: %v"
+	cerrEmptyPatch      string = "patch cannot be empty"
 
 	// Query
 	cerrGraphQLResponseEmpty string = "error: graphQL response data is nil or empty"
@@ -34,8 +35,8 @@ const (
 	cerrNoDocIDOrFilter      string = "error: performing the operation requires a DocID or filter"
 
 	// Index
-	cerrInvalidAscensionOrder        string = "invalid order: expected ASC or DESC for field: %v"
-	cerrInvalidIndexFieldDescription string = "invalid or malformed field description for field: %v"
+	cerrInvalidAscensionOrder        string = "invalid ascension order: expected ASC or DESC"
+	cerrInvalidIndexFieldDescription string = "invalid or malformed field descriptiona"
 
 	// Txn
 	cerrCreatingTxn     string = "error creating transaction: %v"
@@ -43,5 +44,6 @@ const (
 	cerrTxnDoesNotExist string = "error: transaction with ID %v does not exist"
 
 	// Generic
-	cerrMarshallingJSON string = "error marshalling JSON: %v"
+	cerrInvalidLensConfig string = "invalid lens configuration: %v"
+	cerrMarshallingJSON   string = "error marshalling JSON: %v"
 )

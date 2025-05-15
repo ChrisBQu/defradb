@@ -12,14 +12,15 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
+	"github.com/sourcenetwork/defradb/internal/db"
 	"github.com/sourcenetwork/defradb/net"
 	"github.com/sourcenetwork/defradb/node"
 )
 
 var globalNode *node.Node
-var nodeReady = make(chan struct{})
 
 //export nodeInit
 func nodeInit(cOptions C.NodeInitOptions) *C.Result {
@@ -44,46 +45,79 @@ func nodeInit(cOptions C.NodeInitOptions) *C.Result {
 		}
 	}
 
-	// Try to create the node
-	globalNode, err = node.New(
-		ctx,
+	// Try to create the node options
+	opts := []node.Option{
 		node.WithStorePath(dbPath),
 		node.WithLensRuntime(node.Wazero),
-		net.WithListenAddresses(listeningAddresses...),
-	)
+	}
+	if len(listeningAddresses) > 0 {
+		opts = append(opts, net.WithListenAddresses(listeningAddresses...))
+	}
+	maxTxnRetries := int(cOptions.maxTransactionRetries)
+	if maxTxnRetries > 0 {
+		opts = append(opts, db.WithMaxRetries(maxTxnRetries))
+	}
+	disableP2PFlag := cOptions.disableP2P != 0
+	if disableP2PFlag {
+		opts = append(opts, node.WithDisableP2P(true))
+	}
+	disableAPIFlag := cOptions.disableAPI != 0
+	if disableAPIFlag {
+		opts = append(opts, node.WithDisableAPI(true))
+	}
+
+	peers := splitCommaSeparatedCString(cOptions.peers)
+	if len(peers) > 0 {
+		opts = append(opts, net.WithBootstrapPeers(peers...))
+	}
+	// Configure the replicator retry times. Go from string slice -> time.Duration slice
+	replicatorRetryTimes := splitCommaSeparatedCString(cOptions.replicatorRetryIntervals)
+	var replicatorRetryIntervals []time.Duration
+	for _, s := range replicatorRetryTimes {
+		n, err := strconv.Atoi(s)
+		if err != nil {
+			return returnC(1, fmt.Sprintf(cerrParsingReplicatorTimes, err), "")
+		}
+		if n <= 0 {
+			return returnC(1, cerrNegativeReplicatorTime, "")
+		}
+		replicatorRetryIntervals = append(replicatorRetryIntervals, time.Duration(n)*time.Second)
+	}
+	if len(replicatorRetryIntervals) > 0 {
+		opts = append(opts, db.WithRetryInterval(replicatorRetryIntervals))
+	}
+
+	// Try to create the node passing in the collected options, then return the result
+	globalNode, err = node.New(ctx, opts...)
 	if err != nil {
 		return returnC(1, fmt.Sprintf(cerrCreatingNode, err), "")
 	}
-
 	return returnC(0, "", "")
 }
 
 //export nodeStart
 func nodeStart() *C.Result {
-	// Fail early if the node has not been initialized
 	if globalNode == nil {
 		return returnC(1, cerrUninitializedNode, "")
 	}
 	ctx := context.Background()
 
+	errCh := make(chan error, 1)
+
 	go func() {
 		err := globalNode.Start(ctx)
-		if err != nil {
-			// TO DO: Pass this out to the main function for return to C
-			println("Failed to start node")
-			return
-		}
-		close(nodeReady)
+		errCh <- err
 	}()
 
-	// Wait for the node to be ready, or timeout after 5 seconds
 	select {
-	case <-nodeReady:
-		// Node started successfully
+	case err := <-errCh:
+		if err != nil {
+			return returnC(1, err.Error(), "")
+		}
 		return returnC(0, "", "")
 	case <-time.After(5 * time.Second):
-		// Timeout occurred
-		return returnC(1, "Timed out waiting for node to start", "")
+		// Timeout occurred, node may still start later
+		return returnC(2, "Node is still starting (timeout waiting for readiness)", "")
 	}
 }
 

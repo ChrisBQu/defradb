@@ -20,6 +20,11 @@ typedef struct {
 typedef struct {
     const char* dbPath;
     const char* listeningAddresses;
+    const char* replicatorRetryIntervals;
+    const char* peers;
+    int disableP2P;
+    int disableAPI;
+    int maxTransactionRetries;
 } NodeInitOptions;
 
 #endif // RESULT_H
