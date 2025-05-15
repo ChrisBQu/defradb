@@ -4,7 +4,7 @@
 package main
 
 /*
-#include "result.h"
+#include "defra_structs.h"
 */
 import "C"
 
