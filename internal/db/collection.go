@@ -13,6 +13,7 @@ package db
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -351,18 +352,27 @@ func (c *collection) Create(
 
 	ctx = iIdentity.WithContext(ctx, opt.Identity)
 
-	ctx, txn, err := ensureContextTxn(ctx, c.db, false)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, c.db, false)
 	if err != nil {
 		return err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	err = c.create(ctx, doc, opt)
 	if err != nil {
 		return err
 	}
 
-	return txn.Commit()
+	// If a new transaction was created, we will try to commit it.
+	if createdNew {
+		if err := txn.Commit(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // CreateMany creates a collection of documents at once.
@@ -383,11 +393,14 @@ func (c *collection) CreateMany(
 
 	ctx = iIdentity.WithContext(ctx, opt.Identity)
 
-	ctx, txn, err := ensureContextTxn(ctx, c.db, false)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, c.db, false)
 	if err != nil {
 		return err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	for _, doc := range docs {
 		err = c.create(ctx, doc, opt)
@@ -395,7 +408,13 @@ func (c *collection) CreateMany(
 			return err
 		}
 	}
-	return txn.Commit()
+	// If a new transaction was created, we will try to commit it.
+	if createdNew {
+		if err := txn.Commit(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (c *collection) getDocIDAndPrimaryKeyFromDoc(
@@ -513,11 +532,14 @@ func (c *collection) Update(
 
 	ctx = iIdentity.WithContext(ctx, opt.Identity)
 
-	ctx, txn, err := ensureContextTxn(ctx, c.db, false)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, c.db, false)
 	if err != nil {
 		return err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	primaryKey, err := c.getPrimaryKeyFromDocID(ctx, doc.ID())
 	if err != nil {
@@ -540,7 +562,13 @@ func (c *collection) Update(
 		return err
 	}
 
-	return txn.Commit()
+	// If a new transaction was created, we will try to commit it.
+	if createdNew {
+		if err := txn.Commit(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Contract: DB Exists check is already performed, and a doc with the given ID exists.
@@ -595,11 +623,14 @@ func (c *collection) Save(
 
 	ctx = iIdentity.WithContext(ctx, opt.Identity)
 
-	ctx, txn, err := ensureContextTxn(ctx, c.db, false)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, c.db, false)
 	if err != nil {
 		return err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	// Check if document already exists with primary DS key.
 	primaryKey, err := c.getPrimaryKeyFromDocID(ctx, doc.ID())
@@ -625,7 +656,14 @@ func (c *collection) Save(
 		return err
 	}
 
-	return txn.Commit()
+	// If a new transaction was created, we will try to commit it.
+	if createdNew {
+		fmt.Println("Committing transaction")
+		if err := txn.Commit(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // hasPrivateKey checks if the identity is a FullIdentity and has a non-nil private key.
@@ -843,11 +881,14 @@ func (c *collection) Delete(
 
 	ctx = iIdentity.WithContext(ctx, opt.Identity)
 
-	ctx, txn, err := ensureContextTxn(ctx, c.db, false)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, c.db, false)
 	if err != nil {
 		return false, err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	primaryKey, err := c.getPrimaryKeyFromDocID(ctx, docID)
 	if err != nil {
@@ -863,7 +904,13 @@ func (c *collection) Delete(
 	if err != nil {
 		return false, err
 	}
-	return true, txn.Commit()
+	// If a new transaction was created, we will try to commit it.
+	if createdNew {
+		if err := txn.Commit(); err != nil {
+			return false, err
+		}
+	}
+	return true, nil
 }
 
 // Exists checks if a given document exists with supplied DocID.
@@ -883,11 +930,14 @@ func (c *collection) Exists(
 
 	ctx = iIdentity.WithContext(ctx, opt.Identity)
 
-	ctx, txn, err := ensureContextTxn(ctx, c.db, false)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, c.db, false)
 	if err != nil {
 		return false, err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	primaryKey, err := c.getPrimaryKeyFromDocID(ctx, docID)
 	if err != nil {
@@ -898,7 +948,12 @@ func (c *collection) Exists(
 	if err != nil && !errors.Is(err, corekv.ErrNotFound) {
 		return false, err
 	}
-	return exists && !isDeleted, txn.Commit()
+
+	// If a new transaction was created, we will try to commit it.
+	if createdNew {
+		return exists && !isDeleted, txn.Commit()
+	}
+	return exists && !isDeleted, nil
 }
 
 // check if a document exists with the given primary key

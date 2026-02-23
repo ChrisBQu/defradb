@@ -46,17 +46,26 @@ func (c *collection) UpdateWithFilter(
 
 	ctx = identity.WithContext(ctx, opt.Identity)
 
-	ctx, txn, err := ensureContextTxn(ctx, c.db, false)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, c.db, false)
 	if err != nil {
 		return nil, err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	res, err := c.updateWithFilter(ctx, filter, updater)
 	if err != nil {
 		return nil, err
 	}
-	return res, txn.Commit()
+	// If a new transaction was created, we will try to commit it.
+	if createdNew {
+		if err := txn.Commit(); err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
 }
 
 func (c *collection) updateWithFilter(

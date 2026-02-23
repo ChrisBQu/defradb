@@ -47,6 +47,9 @@ type CreateDoc struct {
 	// If node acp is enabled, identity will be used to check if this operation can be performed.
 	Identity immutable.Option[state.Identity]
 
+	// Used to identify the transaction for this to run against. Optional.
+	TransactionID immutable.Option[int]
+
 	// Specifies whether the document should be encrypted.
 	IsDocEncrypted bool
 
@@ -87,6 +90,7 @@ var _ Action = (*CreateDoc)(nil)
 var _ Stateful = (*CreateDoc)(nil)
 
 func (a *CreateDoc) Execute() {
+
 	if a.DocMap != nil {
 		substituteRelations(a.s, a)
 	}
@@ -152,17 +156,14 @@ func createDocViaColSave(
 	nodeIndex int,
 	collection client.Collection,
 ) ([]client.DocID, error) {
-	txn, err := a.s.GetTransaction(node, immutable.None[int]())
-	if err != nil {
-		return nil, err
-	}
-
+	txn := a.getTransaction(node)
 	ctx := db.InitContext(a.s.Ctx, txn)
 
 	docs, err := parseCreateDocs(ctx, a, collection)
 	if err != nil {
 		return nil, err
 	}
+
 	docIDs := make([]client.DocID, len(docs))
 	for i, doc := range docs {
 		err := collection.Save(ctx, doc, makeDocSaveOptions(a.s, a, nodeIndex)...)
@@ -180,11 +181,7 @@ func createDocViaColCreate(
 	nodeIndex int,
 	collection client.Collection,
 ) ([]client.DocID, error) {
-	txn, err := a.s.GetTransaction(node, immutable.None[int]())
-	if err != nil {
-		return nil, err
-	}
-
+	txn := a.getTransaction(node)
 	ctx := db.InitContext(a.s.Ctx, txn)
 
 	docs, err := parseCreateDocs(ctx, a, collection)
@@ -249,11 +246,7 @@ func createDocViaGQL(
 	key := fmt.Sprintf("create_%s", collection.Name())
 	req := fmt.Sprintf(`mutation { %s(%s) { _docID } }`, key, params)
 
-	txn, err := a.s.GetTransaction(node, immutable.None[int]())
-	if err != nil {
-		return nil, err
-	}
-
+	txn := a.getTransaction(node)
 	ctx := db.InitContext(a.s.Ctx, txn)
 
 	reqOption := options.ExecRequest()
@@ -352,4 +345,29 @@ func makeDocCreateOptions(
 		opts.SetIdentity(identOption.Value())
 	}
 	return []options.Enumerable[options.CollectionCreateOptions]{opts}
+}
+
+func (a *CreateDoc) getTransaction(node client.TxnStore) client.Txn {
+	if !a.TransactionID.HasValue() {
+		return nil
+	}
+
+	transactionID := a.TransactionID.Value()
+
+	// Ensure the slice can hold this txn
+	if transactionID >= len(a.s.Txns) {
+		a.s.Txns = append(a.s.Txns, make([]client.Txn, transactionID-len(a.s.Txns)+1)...)
+	}
+
+	// Lazily create txn if not yet created
+	if a.s.Txns[transactionID] == nil {
+		txn, err := node.NewTxn(false)
+		if assertError(a.s.T, err, a.ExpectedError) {
+			txn.Discard()
+			return nil
+		}
+		a.s.Txns[transactionID] = txn
+	}
+
+	return a.s.Txns[transactionID]
 }

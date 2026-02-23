@@ -177,17 +177,27 @@ func (c *collection) CreateIndex(
 		return client.IndexDescription{}, err
 	}
 
-	ctx, txn, err := ensureContextTxn(ctx, c.db, false)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, c.db, false)
 	if err != nil {
 		return client.IndexDescription{}, err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	index, err := c.createIndex(ctx, desc)
 	if err != nil {
 		return client.IndexDescription{}, err
 	}
-	return index.Description(), txn.Commit()
+
+	// If a new transaction was created, we will try to commit it.
+	if createdNew {
+		if err := txn.Commit(); err != nil {
+			return client.IndexDescription{}, err
+		}
+	}
+	return index.Description(), nil
 }
 
 func processCreateIndexRequest(
@@ -372,17 +382,26 @@ func (c *collection) DeleteIndex(
 		return err
 	}
 
-	ctx, txn, err := ensureContextTxn(ctx, c.db, false)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, c.db, false)
 	if err != nil {
 		return err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	err = c.deleteIndex(ctx, indexName)
 	if err != nil {
 		return err
 	}
-	return txn.Commit()
+	// If a new transaction was created, we will try to commit it.
+	if createdNew {
+		if err := txn.Commit(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (c *collection) deleteIndex(ctx context.Context, indexName string) error {
@@ -450,17 +469,26 @@ func (c *collection) AddEncryptedIndex(
 		return client.EncryptedIndexDescription{}, err
 	}
 
-	ctx, txn, err := ensureContextTxn(ctx, c.db, false)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, c.db, false)
 	if err != nil {
 		return client.EncryptedIndexDescription{}, err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	index, err := c.addEncryptedIndex(ctx, addRequest)
 	if err != nil {
 		return client.EncryptedIndexDescription{}, err
 	}
-	return index, txn.Commit()
+	// If a new transaction was created, we will try to commit it.
+	if createdNew {
+		if err := txn.Commit(); err != nil {
+			return client.EncryptedIndexDescription{}, err
+		}
+	}
+	return index, nil
 }
 
 func (c *collection) addEncryptedIndex(
@@ -523,17 +551,26 @@ func (c *collection) DeleteEncryptedIndex(
 		return err
 	}
 
-	ctx, txn, err := ensureContextTxn(ctx, c.db, false)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, c.db, false)
 	if err != nil {
 		return err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	err = c.deleteEncryptedIndex(ctx, fieldName)
 	if err != nil {
 		return err
 	}
-	return txn.Commit()
+	// If a new transaction was created, we will try to commit it.
+	if createdNew {
+		if err := txn.Commit(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (c *collection) deleteEncryptedIndex(ctx context.Context, fieldName string) error {

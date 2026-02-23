@@ -395,11 +395,14 @@ func (db *DB) fetchNodeACPDesc(ctx context.Context, txn datastore.Txn) error {
 }
 
 func (db *DB) resetNodeACP(ctx context.Context) error {
-	ctx, txn, err := ensureContextTxn(ctx, db, false)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, db, false)
 	if err != nil {
 		return err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	err = db.nodeACP.NodeACP.ResetState(ctx)
 	if err != nil {
@@ -411,9 +414,12 @@ func (db *DB) resetNodeACP(ctx context.Context) error {
 		return err
 	}
 
-	err = txn.Commit()
-	if err != nil {
-		return err
+	// If a new transaction was created, we will try to commit it.
+	if createdNew {
+		err = txn.Commit()
+		if err != nil {
+			return err
+		}
 	}
 
 	// Update state, only when commit is successful.
@@ -422,11 +428,14 @@ func (db *DB) resetNodeACP(ctx context.Context) error {
 }
 
 func (db *DB) saveNodeACPDesc(ctx context.Context) error {
-	ctx, txn, err := ensureContextTxn(ctx, db, false)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, db, false)
 	if err != nil {
 		return err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	nodeDescBytes, err := json.Marshal(db.nodeACP.NodeACPDesc)
 	if err != nil {
@@ -438,9 +447,12 @@ func (db *DB) saveNodeACPDesc(ctx context.Context) error {
 		return err
 	}
 
-	err = txn.Commit()
-	if err != nil {
-		return err
+	// If a new transaction was created, we will try to commit it.
+	if createdNew {
+		err = txn.Commit()
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

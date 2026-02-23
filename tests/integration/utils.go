@@ -1647,6 +1647,12 @@ func commitTransaction(
 		s.Txns[action.TransactionID].Discard()
 	}
 
+	refreshCollections(
+		s,
+		immutable.None[int](),
+		immutable.None[state.Identity](),
+	)
+
 	expectedErrorRaised := AssertError(s.T, err, action.ExpectedError)
 
 	assertExpectedErrorRaised(s.T, action.ExpectedError, expectedErrorRaised)

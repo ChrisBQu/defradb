@@ -44,11 +44,14 @@ func (r collectionRetriever) RetrieveCollectionFromDocID(
 	ctx context.Context,
 	docID string,
 ) (client.Collection, error) {
-	ctx, txn, err := ensureContextTxn(ctx, r.db, false)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, r.db, false)
 	if err != nil {
 		return nil, err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	headIterator, err := NewHeadBlocksIteratorFromTxn(ctx, docID)
 	if err != nil {

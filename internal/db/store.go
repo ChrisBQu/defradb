@@ -37,13 +37,17 @@ func (db *DB) ExecRequest(
 		ctx = identity.WithContext(ctx, opt.Identity)
 	}
 
-	ctx, txn, err := ensureContextTxn(ctx, db, false)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, db, false)
 	if err != nil {
 		res := &client.RequestResult{}
 		res.GQL.Errors = append(res.GQL.Errors, err)
 		return res
 	}
-	defer txn.Discard()
+
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	gqlOpts := &client.GQLOptions{}
 	if opt.OperationName.HasValue() {
@@ -56,9 +60,12 @@ func (db *DB) ExecRequest(
 		return res
 	}
 
-	if err := txn.Commit(); err != nil {
-		res.GQL.Errors = append(res.GQL.Errors, err)
-		return res
+	// If a new transaction was created, we will try to commit it.
+	if createdNew {
+		if err := txn.Commit(); err != nil {
+			res.GQL.Errors = append(res.GQL.Errors, err)
+			return res
+		}
 	}
 
 	return res
@@ -79,11 +86,14 @@ func (db *DB) GetCollectionByName(
 		return nil, err
 	}
 
-	ctx, txn, err := ensureContextTxn(ctx, db, true)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, db, true)
 	if err != nil {
 		return nil, err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	return db.getCollectionByName(ctx, name)
 }
@@ -102,11 +112,14 @@ func (db *DB) GetCollections(
 		return nil, err
 	}
 
-	ctx, txn, err := ensureContextTxn(ctx, db, true)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, db, true)
 	if err != nil {
 		return nil, err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	return db.getCollections(ctx, opt)
 }
@@ -125,11 +138,14 @@ func (db *DB) ListIndexes(
 		return nil, err
 	}
 
-	ctx, txn, err := ensureContextTxn(ctx, db, true)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, db, true)
 	if err != nil {
 		return nil, err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	return db.listIndexDescriptions(ctx)
 }
@@ -148,11 +164,14 @@ func (db *DB) ListAllEncryptedIndexes(
 		return nil, err
 	}
 
-	ctx, txn, err := ensureContextTxn(ctx, db, true)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, db, true)
 	if err != nil {
 		return nil, err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	return db.listAllEncryptedIndexDescriptions(ctx)
 }
@@ -176,19 +195,25 @@ func (db *DB) AddSchema(
 		return nil, err
 	}
 
-	ctx, txn, err := ensureContextTxn(ctx, db, false)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, db, false)
 	if err != nil {
 		return nil, err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	cols, err := db.addSchema(ctx, schemaString)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := txn.Commit(); err != nil {
-		return nil, err
+	// If a new transaction was created, we will try to commit it.
+	if createdNew {
+		if err := txn.Commit(); err != nil {
+			return nil, err
+		}
 	}
 	return cols, nil
 }
@@ -220,18 +245,25 @@ func (db *DB) PatchCollection(
 		return err
 	}
 
-	ctx, txn, err := ensureContextTxn(ctx, db, false)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, db, false)
 	if err != nil {
 		return err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	err = db.patchCollection(ctx, patchString, migration)
 	if err != nil {
 		return err
 	}
 
-	return txn.Commit()
+	// If a new transaction was created, we will try to commit it.
+	if createdNew {
+		return txn.Commit()
+	}
+	return nil
 }
 
 func (db *DB) SetActiveCollectionVersion(
@@ -248,18 +280,25 @@ func (db *DB) SetActiveCollectionVersion(
 		return err
 	}
 
-	ctx, txn, err := ensureContextTxn(ctx, db, false)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, db, false)
 	if err != nil {
 		return err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	err = db.setActiveCollectionVersion(ctx, collectionVersionID)
 	if err != nil {
 		return err
 	}
 
-	return txn.Commit()
+	// If a new transaction was created, we will try to commit it.
+	if createdNew {
+		return txn.Commit()
+	}
+	return nil
 }
 
 func (db *DB) SetMigration(
@@ -277,20 +316,25 @@ func (db *DB) SetMigration(
 		return "", err
 	}
 
-	ctx, txn, err := ensureContextTxn(ctx, db, false)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, db, false)
 	if err != nil {
 		return "", err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	lensID, err := db.setMigration(ctx, cfg)
 	if err != nil {
 		return "", err
 	}
 
-	err = txn.Commit()
-	if err != nil {
-		return "", err
+	// If a new transaction was created, we will try to commit it.
+	if createdNew {
+		if err := txn.Commit(); err != nil {
+			return "", err
+		}
 	}
 
 	return lensID, nil
@@ -311,20 +355,25 @@ func (db *DB) AddLens(
 		return "", err
 	}
 
-	ctx, txn, err := ensureContextTxn(ctx, db, false)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, db, false)
 	if err != nil {
 		return "", err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	lensID, err := db.addLens(ctx, lens)
 	if err != nil {
 		return "", err
 	}
 
-	err = txn.Commit()
-	if err != nil {
-		return "", err
+	// If a new transaction was created, we will try to commit it.
+	if createdNew {
+		if err := txn.Commit(); err != nil {
+			return "", err
+		}
 	}
 
 	return lensID, nil
@@ -344,11 +393,14 @@ func (db *DB) ListLenses(
 		return nil, err
 	}
 
-	ctx, txn, err := ensureContextTxn(ctx, db, false)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, db, false)
 	if err != nil {
 		return nil, err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	return db.listLenses(ctx)
 }
@@ -370,20 +422,25 @@ func (db *DB) AddView(
 
 	ctx = identity.WithContext(ctx, opt.GetIdentity())
 
-	ctx, txn, err := ensureContextTxn(ctx, db, false)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, db, false)
 	if err != nil {
 		return nil, err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	defs, err := db.addView(ctx, query, sdl, opt.TransformCID)
 	if err != nil {
 		return nil, err
 	}
 
-	err = txn.Commit()
-	if err != nil {
-		return nil, err
+	// If a new transaction was created, we will try to commit it.
+	if createdNew {
+		if err := txn.Commit(); err != nil {
+			return nil, err
+		}
 	}
 
 	return defs, nil
@@ -401,20 +458,25 @@ func (db *DB) RefreshViews(ctx context.Context, opts ...options.Enumerable[optio
 
 	ctx = identity.WithContext(ctx, opt.GetIdentity())
 
-	ctx, txn, err := ensureContextTxn(ctx, db, false)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, db, false)
 	if err != nil {
 		return err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	err = db.refreshViews(ctx, opt)
 	if err != nil {
 		return err
 	}
 
-	err = txn.Commit()
-	if err != nil {
-		return err
+	// If a new transaction was created, we will try to commit it.
+	if createdNew {
+		if err := txn.Commit(); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -426,18 +488,26 @@ func (db *DB) BasicImport(ctx context.Context, filepath string) error {
 	ctx, span := tracer.Start(ctx)
 	defer span.End()
 
-	ctx, txn, err := ensureContextTxn(ctx, db, false)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, db, false)
 	if err != nil {
 		return err
 	}
-	defer txn.Discard()
+
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	err = db.basicImport(ctx, filepath)
 	if err != nil {
 		return err
 	}
 
-	return txn.Commit()
+	// If a new transaction was created, we will try to commit it.
+	if createdNew {
+		return txn.Commit()
+	}
+	return nil
 }
 
 // BasicExport exports the current data or subset of data to file in json format.
@@ -451,11 +521,14 @@ func (db *DB) BasicExport(
 
 	opt := utils.NewOptions(opts...)
 
-	ctx, txn, err := ensureContextTxn(ctx, db, true)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, db, true)
 	if err != nil {
 		return err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	config := &client.BackupConfig{
 		Filepath:    filepath,
@@ -469,5 +542,9 @@ func (db *DB) BasicExport(
 		return err
 	}
 
-	return txn.Commit()
+	// If a new transaction was created, we will try to commit it.
+	if createdNew {
+		return txn.Commit()
+	}
+	return nil
 }

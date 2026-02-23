@@ -35,7 +35,9 @@ type transactionDB interface {
 //
 // The returned context will contain the transaction
 // along with the copied values from the input context.
-func ensureContextTxn(ctx context.Context, db transactionDB, readOnly bool) (context.Context, datastore.Txn, error) {
+//
+// The returned boolean indicates if the transaction was created (true) or reused (false).
+func ensureContextTxn(ctx context.Context, db transactionDB, readOnly bool) (context.Context, datastore.Txn, bool, error) {
 	// explicit transaction
 	ctxTxn, ok := datastore.CtxTryGetTxn(ctx)
 	if ok {
@@ -43,7 +45,7 @@ func ensureContextTxn(ctx context.Context, db transactionDB, readOnly bool) (con
 		case *Txn:
 			if txn.explicit {
 				// if it's already an explicit txn we return it as is.
-				return InitContext(ctx, txn), txn, nil
+				return InitContext(ctx, txn), txn, false, nil
 			}
 			// If the txn has already been set on the context but it hasn't already been set as explicit,
 			// we create a copy of the txn and mark it as an explicit txn.
@@ -52,7 +54,7 @@ func ensureContextTxn(ctx context.Context, db transactionDB, readOnly bool) (con
 				txn.db,
 				true,
 			}
-			return InitContext(ctx, explicitTxn), explicitTxn, nil
+			return InitContext(ctx, explicitTxn), explicitTxn, false, nil
 		case *datastore.BasicTxn:
 			// There are scenarios where the transaction passed to the `db` methods was created
 			// from a separate package (ex: `net`). In that situation the type of transaction passed in
@@ -65,17 +67,17 @@ func ensureContextTxn(ctx context.Context, db transactionDB, readOnly bool) (con
 				nil,
 				true,
 			}
-			return InitContext(ctx, explicitTxn), explicitTxn, nil
+			return InitContext(ctx, explicitTxn), explicitTxn, false, nil
 		default:
-			return nil, nil, NewErrUnsupportedTxnType(ctxTxn)
+			return nil, nil, false, NewErrUnsupportedTxnType(ctxTxn)
 		}
 	}
 	clientTxn, err := db.NewTxn(readOnly)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, false, err
 	}
 	txn := clientTxn.(*Txn) //nolint:forcetypeassert
-	return InitContext(ctx, txn), txn, nil
+	return InitContext(ctx, txn), txn, true, nil
 }
 
 type Txn struct {

@@ -289,11 +289,14 @@ func (db *DB) initialize(ctx context.Context) error {
 	db.glock.Lock()
 	defer db.glock.Unlock()
 
-	ctx, txn, err := ensureContextTxn(ctx, db, false)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, db, false)
 	if err != nil {
 		return err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	if err := db.initializeNodeACP(ctx, txn); err != nil {
 		return err
@@ -335,7 +338,11 @@ func (db *DB) initialize(ctx context.Context) error {
 		return err
 	}
 
-	return txn.Commit()
+	// If a new transaction was created, we will try to commit it.
+	if createdNew {
+		return txn.Commit()
+	}
+	return nil
 }
 
 func (db *DB) Rootstore() corekv.TxnStore {

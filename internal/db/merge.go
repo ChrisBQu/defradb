@@ -79,11 +79,14 @@ func (db *DB) Merge(ctx context.Context, evt event.Merge) error {
 }
 
 func (db *DB) executeMerge(ctx context.Context, col *collection, dagMerge event.Merge) error {
-	ctx, txn, err := ensureContextTxn(ctx, db, false)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, db, false)
 	if err != nil {
 		return err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	var key keys.HeadstoreKey
 	if dagMerge.DocID != "" {
@@ -127,9 +130,12 @@ func (db *DB) executeMerge(ctx context.Context, col *collection, dagMerge event.
 		}
 	}
 
-	err = txn.Commit()
-	if err != nil {
-		return err
+	// If a new transaction was created, we will try to commit it.
+	if createdNew {
+		err = txn.Commit()
+		if err != nil {
+			return err
+		}
 	}
 
 	// send a complete event so we can track merges in the integration tests
@@ -495,11 +501,14 @@ func (mp *mergeProcessor) trackMergedDocument(ctx context.Context, docID client.
 }
 
 func getCollectionFromCollectionID(ctx context.Context, db *DB, collectionID string) (*collection, error) {
-	ctx, txn, err := ensureContextTxn(ctx, db, false)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, db, false)
 	if err != nil {
 		return nil, err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	cols, err := db.getCollections(
 		ctx,

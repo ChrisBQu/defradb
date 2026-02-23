@@ -76,18 +76,25 @@ func (db *DB) AddReplicator(
 	if db.p2p == nil {
 		return ErrNoP2P
 	}
-	ctx, txn, err := ensureContextTxn(ctx, db, false)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, db, false)
 	if err != nil {
 		return err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	err = db.p2p.AddReplicator(ctx, addresses, opt.CollectionNames...)
 	if err != nil {
 		return err
 	}
 
-	return txn.Commit()
+	// If a new transaction was created, we will try to commit it.
+	if createdNew {
+		return txn.Commit()
+	}
+	return nil
 }
 
 // DeleteReplicator deletes a replicator from the persisted list
@@ -108,18 +115,25 @@ func (db *DB) DeleteReplicator(
 	if db.p2p == nil {
 		return ErrNoP2P
 	}
-	ctx, txn, err := ensureContextTxn(ctx, db, false)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, db, false)
 	if err != nil {
 		return err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	err = db.p2p.DeleteReplicator(ctx, id, opt.CollectionNames...)
 	if err != nil {
 		return err
 	}
 
-	return txn.Commit()
+	// If a new transaction was created, we will try to commit it.
+	if createdNew {
+		return txn.Commit()
+	}
+	return nil
 }
 
 // ListReplicators returns the full list of replicators with their
@@ -137,11 +151,14 @@ func (db *DB) ListReplicators(
 	if db.p2p == nil {
 		return nil, ErrNoP2P
 	}
-	ctx, txn, err := ensureContextTxn(ctx, db, true)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, db, true)
 	if err != nil {
 		return nil, err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 	return db.p2p.ListReplicators(ctx)
 }
 
@@ -178,11 +195,14 @@ func (db *DB) AddP2PCollections(
 	if db.p2p == nil {
 		return ErrNoP2P
 	}
-	ctx, txn, err := ensureContextTxn(ctx, db, false)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, db, false)
 	if err != nil {
 		return err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	err = db.p2p.AddP2PCollections(identity.WithContext(ctx, opt.Identity), collectionNames...)
 	if err != nil {
@@ -209,18 +229,25 @@ func (db *DB) DeleteP2PCollections(
 	if db.p2p == nil {
 		return ErrNoP2P
 	}
-	ctx, txn, err := ensureContextTxn(ctx, db, false)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, db, false)
 	if err != nil {
 		return err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	err = db.p2p.DeleteP2PCollections(identity.WithContext(ctx, opt.Identity), collectionNames...)
 	if err != nil {
 		return err
 	}
 
-	return txn.Commit()
+	// If a new transaction was created, we will try to commit it.
+	if createdNew {
+		return txn.Commit()
+	}
+	return nil
 }
 
 // ListP2PCollections returns the list of persisted collection names that
@@ -238,11 +265,14 @@ func (db *DB) ListP2PCollections(
 	if db.p2p == nil {
 		return nil, ErrNoP2P
 	}
-	ctx, txn, err := ensureContextTxn(ctx, db, true)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, db, true)
 	if err != nil {
 		return nil, err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	return db.p2p.ListP2PCollections(identity.WithContext(ctx, opt.Identity))
 }
@@ -264,18 +294,25 @@ func (db *DB) AddP2PDocuments(
 	if db.p2p == nil {
 		return ErrNoP2P
 	}
-	ctx, txn, err := ensureContextTxn(ctx, db, false)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, db, false)
 	if err != nil {
 		return err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	err = db.p2p.AddP2PDocuments(ctx, docIDs...)
 	if err != nil {
 		return err
 	}
 
-	return txn.Commit()
+	// If a new transaction was created, we will try to commit it.
+	if createdNew {
+		return txn.Commit()
+	}
+	return nil
 }
 
 // DeleteP2PDocuments removes the given docIDs from the P2P system and
@@ -295,18 +332,25 @@ func (db *DB) DeleteP2PDocuments(
 	if db.p2p == nil {
 		return ErrNoP2P
 	}
-	ctx, txn, err := ensureContextTxn(ctx, db, false)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, db, false)
 	if err != nil {
 		return err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	err = db.p2p.DeleteP2PDocuments(ctx, docIDs...)
 	if err != nil {
 		return err
 	}
 
-	return txn.Commit()
+	// If a new transaction was created, we will try to commit it.
+	if createdNew {
+		return txn.Commit()
+	}
+	return nil
 }
 
 // ListP2PDocuments returns the list of persisted docIDs that
@@ -324,11 +368,14 @@ func (db *DB) ListP2PDocuments(
 	if db.p2p == nil {
 		return nil, ErrNoP2P
 	}
-	ctx, txn, err := ensureContextTxn(ctx, db, true)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, db, true)
 	if err != nil {
 		return nil, err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	return db.p2p.ListP2PDocuments(ctx)
 }
@@ -378,18 +425,25 @@ func (db *DB) SyncCollectionVersions(
 		return ErrNoP2P
 	}
 
-	ctx, txn, err := ensureContextTxn(ctx, db, false)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, db, false)
 	if err != nil {
 		return err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 
 	err = db.p2p.SyncCollectionVersions(ctx, versionIDs...)
 	if err != nil {
 		return err
 	}
 
-	return txn.Commit()
+	// If a new transaction was created, we will try to commit it.
+	if createdNew {
+		return txn.Commit()
+	}
+	return nil
 }
 
 // SyncBranchableCollection requests the latest version of the branchable collection's DAG

@@ -44,11 +44,14 @@ func (c *collection) Get(
 	ctx = identity.WithContext(ctx, opt.Identity)
 
 	// create txn
-	ctx, txn, err := ensureContextTxn(ctx, c.db, true)
+	ctx, txn, createdNew, err := ensureContextTxn(ctx, c.db, true)
 	if err != nil {
 		return nil, err
 	}
-	defer txn.Discard()
+	// If a new transaction was created, we need to discard it.
+	if createdNew {
+		defer txn.Discard()
+	}
 	primaryKey, err := c.getPrimaryKeyFromDocID(ctx, docID)
 	if err != nil {
 		return nil, err
@@ -71,7 +74,13 @@ func (c *collection) Get(
 		return nil, client.ErrDocumentNotFoundOrNotAuthorized
 	}
 
-	return doc, txn.Commit()
+	// If a new transaction was created, we will try to commit it.
+	if createdNew {
+		if err := txn.Commit(); err != nil {
+			return nil, err
+		}
+	}
+	return doc, nil
 }
 
 func (c *collection) get(

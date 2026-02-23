@@ -15,6 +15,7 @@ import (
 
 	"github.com/sourcenetwork/defradb/client"
 	"github.com/sourcenetwork/defradb/client/options"
+	"github.com/sourcenetwork/defradb/internal/db"
 	"github.com/sourcenetwork/defradb/tests/state"
 )
 
@@ -31,6 +32,9 @@ type AddSchema struct {
 	//
 	// If node acp is enabled, identity will be used to check if this operation can be performed.
 	Identity immutable.Option[state.Identity]
+
+	// Used to identify the transaction for this to run against. Optional.
+	TransactionID immutable.Option[int]
 
 	// The schema to add.
 	Schema string
@@ -59,6 +63,9 @@ func (a *AddSchema) Execute() {
 	for index, node := range nodes {
 		nodeID := nodeIDs[index]
 
+		txn := a.getTransaction(node)
+		ctx := db.InitContext(a.s.Ctx, txn)
+
 		schema := replace(a.s, nodeID, a.Schema)
 
 		opts := options.AddSchema()
@@ -66,7 +73,7 @@ func (a *AddSchema) Execute() {
 		if identOption.HasValue() {
 			opts.SetIdentity(identOption.Value())
 		}
-		results, err := node.AddSchema(a.s.Ctx, schema, opts)
+		results, err := node.AddSchema(ctx, schema, opts)
 
 		for _, result := range results {
 			appendCollectionVersion(a.s, result.VersionID)
@@ -82,5 +89,34 @@ func (a *AddSchema) Execute() {
 	}
 
 	// If the schema was updated we need to refresh the collection definitions.
-	refreshCollections(a.s)
+	// But we only do this if the action is not running in a transaction.
+	if !a.TransactionID.HasValue() {
+		refreshCollections(a.s)
+	}
+}
+
+// getTransaction returns the transaction for this action, creating one if needed.
+func (a *AddSchema) getTransaction(db client.TxnStore) client.Txn {
+	if !a.TransactionID.HasValue() {
+		return nil
+	}
+
+	transactionID := a.TransactionID.Value()
+
+	if transactionID >= len(a.s.Txns) {
+		// Extend the txn slice so this txn can fit and be accessed by TransactionId
+		a.s.Txns = append(a.s.Txns, make([]client.Txn, transactionID-len(a.s.Txns)+1)...)
+	}
+
+	if a.s.Txns[transactionID] == nil {
+		txn, err := db.NewTxn(false)
+		if assertError(a.s.T, err, a.ExpectedError) {
+			txn.Discard()
+			return nil
+		}
+
+		a.s.Txns[transactionID] = txn
+	}
+
+	return a.s.Txns[transactionID]
 }
