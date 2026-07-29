@@ -2,16 +2,15 @@
 set -euo pipefail
 
 # Builds defradb.jar for the tests/clients/java client: clones (or updates)
-# DefraJavaWrapper into a local, gitignored checkout, then runs its own
-# build.sh, which in turn:
+# https://github.com/sourcenetwork/defradb-java-sdk into a local, gitignored checkout,
+# then runs its own build.sh, which in turn:
+#
 #   1. runs `make build-c-shared-linux` in this repo to build libdefradb.so
 #   2. copies that .so + headers into the checkout
 #   3. compiles nativewrapper.c against it (its own src/main/c/build.sh)
 #   4. runs its Gradle build to produce build/libs/defradb.jar
 #
-# This only works on Linux (build-c-shared-linux cross-compiles nothing - it
-# needs a real Linux gcc/cgo toolchain, and DefraJavaWrapper's build.sh shells
-# out to `make`/bash throughout) - run it from WSL on Windows.
+# This only works on Linux 
 #
 # Requires: git, make, go, gcc, and a JDK (for Gradle) on PATH.
 
